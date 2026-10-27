@@ -29,18 +29,25 @@ for l in lines:
 def ok(c):
     return c["shown"] and c["focus"] is True and c["closed"] and c.get("close_by") == "hotkey"
 
+def status(c, last):
+    if ok(c): return "PASS"
+    if last and c["shown"] and c["focus"] is not False and not c["closed"]: return "진행 중(아직 열려 있음)"
+    return "FAIL"
+
 n_ok = sum(ok(c) for c in cycles)
+n_fail = sum(status(c, i == len(cycles) - 1) == "FAIL" for i, c in enumerate(cycles))
 target = 30
-verdict = "PASS" if n_ok >= target and n_ok == len(cycles) else ("부분 증거" if n_ok < target else "FAIL")
+verdict = "FAIL" if n_fail else ("PASS" if n_ok >= target else "부분 증거")
 out = [f"# AC-01 수동 핫키 집계 ({datetime.datetime.now().isoformat(timespec='seconds')})",
        f"집계 범위: 진단 로그의 마지막 app.launched 이후 ({lines[0].split(' ',1)[0]}) — 작가님 수동 입력만, 키 이벤트 주입 없음",
        f"열기 시도(핫키 눌러 열림 요청): {len(cycles)}회",
        f"정상 사이클(열림 + 텍스트 입력 포커스 + 두 번째 핫키로 닫힘): {n_ok}회 / 목표 {target}회",
+       f"실패 사이클: {n_fail}회",
        f"판정: {verdict}" + (f" (부족분 {target - n_ok}회)" if n_ok < target else ""),
        "", "| # | 눌린 시각(UTC) | 열림 | 화면 | 사용영역 안 | 입력 포커스 | 닫힘 방법 | 결과 |", "|---|---|---|---|---|---|---|---|"]
 for i, c in enumerate(cycles, 1):
     out.append(f"| {i} | {c['pressed_at']} | {c['shown']} | {c['screen']} | {c['inside']} | {c['focus']} | "
-               f"{c.get('close_by','열린 채')} | {'PASS' if ok(c) else 'FAIL'} |")
+               f"{c.get('close_by','열린 채')} | {status(c, i == len(cycles))} |")
 out += ["", "참고: 키 충돌 안내는 등록 실패 시 메뉴바 아이콘·설정에 표시(이번 실행은 hotkey.register ok=true)."]
 text = "\n".join(out) + "\n"
 dest = root / "qa/evidence/AC-01"
