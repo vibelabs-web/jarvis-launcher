@@ -9,10 +9,12 @@ struct PromptRootView: View {
         VStack(alignment: .leading, spacing: 8) {
             header
             PromptTextView(model: model)
-                .frame(minHeight: 96, maxHeight: 150)
+                .frame(minHeight: model.inputExpanded ? AppModel.expandedInputHeight : 96,
+                       maxHeight: model.inputExpanded ? AppModel.expandedInputHeight : AppModel.inputHeight)
                 .padding(6)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .textBackgroundColor).opacity(0.5)))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.25)))
+                .overlay(alignment: .topTrailing) { viewButtons }
             if let summary = model.targetSummary {
                 Text(summary)
                     .font(.caption)
@@ -32,6 +34,24 @@ struct PromptRootView: View {
         .padding(.bottom, 12)
         .frame(width: PanelController.width, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
+    }
+
+    /// 입력창 오른쪽 위: 크게 보기(⌘E) · 전체 보기(⌘⇧E)
+    var viewButtons: some View {
+        HStack(spacing: 2) {
+            Button { model.toggleExpanded() } label: {
+                Image(systemName: model.inputExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+            }
+            .help(model.inputExpanded ? "원래 크기로 (⌘E)" : "입력창 크게 보기 (⌘E)")
+            .accessibilityLabel(model.inputExpanded ? "입력창 원래 크기" : "입력창 크게 보기")
+            Button { model.onOpenFullView?() } label: { Image(systemName: "macwindow") }
+                .help("전체 보기 창 (⌘⇧E)")
+                .accessibilityLabel("프롬프트 전체 보기")
+        }
+        .buttonStyle(.borderless)
+        .font(.caption)
+        .foregroundStyle(.secondary)
+        .padding(6)
     }
 
     var header: some View {

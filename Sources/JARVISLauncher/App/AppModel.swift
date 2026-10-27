@@ -44,6 +44,8 @@ final class AppModel: ObservableObject {
     /// 모델이 텍스트를 바꾼 뒤 입력창에 적용할 커서 위치
     @Published var pendingCaret: Int?
     @Published var focusTick = 0
+    /// 입력창 크게 보기(⌘E). 긴 정리본을 패널 안에서 읽기 위함
+    @Published var inputExpanded = false
 
     // MARK: 칩
     @Published var selectedProjectID: UUID?
@@ -92,6 +94,9 @@ final class AppModel: ObservableObject {
 
     var onRequestHide: (() -> Void)?
     var onOpenSettings: (() -> Void)?
+    /// 전체 보기 창 열기·닫기(⌘⇧E). PanelController가 연결한다
+    var onOpenFullView: (() -> Void)?
+    var onCloseFullView: (() -> Void)?
     var onHotkeyChanged: ((HotkeySetting) -> Void)?
 
     let stores: AppStores
@@ -119,11 +124,29 @@ final class AppModel: ObservableObject {
 
     var showNewProjectCard: Bool { newProjectMode && (meta != nil || composingMeta || creation != nil) }
 
+    static let inputHeight: CGFloat = 150
+    static let expandedInputHeight: CGFloat = 480
+
+    func toggleExpanded() {
+        inputExpanded.toggle()
+        Diagnostics.log("panel.expand \(inputExpanded)")
+        focusTick += 1
+    }
+
+    /// 전체 보기 창에서 고친 글. 트리거 목록(@·/)은 패널 전용이라 열지 않는다.
+    func fullViewTextChanged(_ text: String, caret: Int) {
+        session.original = text
+        caretUTF16 = caret
+        if listKind != nil { activeTrigger = nil; closeList() }
+        if status?.kind == .ok { status = nil }
+    }
+
     var panelHeight: CGFloat {
         var h: CGFloat = 214
         if targetSummary != nil { h += 20 }
         if let s = status { h += s.canRetry || s.confirmInferredSkill || s.canRevertDictation ? 34 : 24 }
         if listKind != nil { h += min(CGFloat(max(listItems.count, 1)), 6) * 40 + 30 }
+        if inputExpanded { h += Self.expandedInputHeight - Self.inputHeight }
         if showNewProjectCard { h += 360 }
         return h
     }
@@ -553,6 +576,7 @@ final class AppModel: ObservableObject {
             let out = await d.dispatch(text: text, to: target, retryRequestId: retryRequestId)
             phase = .compose
             Diagnostics.log("dispatch outcome=\(out.label) chars=\(text.count)")
+            recordSend(text: text, target: target, outcome: out)
             switch out {
             case .delivered(let rid):
                 lastDelivery = (target, text, rid)
@@ -581,6 +605,30 @@ final class AppModel: ObservableObject {
             }
             focusTick += 1
         }
+    }
+
+    // MARK: 프롬프트 기록 (ADR-8)
+
+    /// 훅이 쓰는 것과 같은 DB. 훅 기록과 같은 글로 짝지어 받아쓴 원문·프로젝트를 붙인다.
+    lazy var promptLog: PromptLog? = try? PromptLog(url: stores.directory.appendingPathComponent("prompts.sqlite"))
+
+    private func recordSend(text: String, target: TargetSnapshot, outcome: DeliveryOutcome) {
+        let label: String
+        switch outcome {
+        case .delivered: label = "delivered"
+        case .unknown: label = "unknown"
+        default: return  // 보내지 않은 것은 기록하지 않는다
+        }
+        // 보낸 글에 받아쓴 원문이 들어 있을 때만(정리본 끝에 붙는다) 원문으로 함께 남긴다
+        let transcript = lastDictation.flatMap { text.contains($0.transcript) ? $0.transcript : nil }
+        let project = projects.first { $0.id == target.projectID }?.alias ?? PromptLog.projectName(cwd: target.canonicalPath)
+        do {
+            try promptLog?.recordLauncherSend(text: text, transcript: transcript, project: project,
+                                              skill: selectedSkill?.invocation, outcome: label)
+        } catch {
+            Diagnostics.log("promptlog.send failed \(error.localizedDescription)")
+        }
+        if case .delivered = outcome { lastDictation = nil }
     }
 
     /// 상태 불명 뒤 사용자가 화면을 확인하고 누르는 수동 재시도. 같은 requestId로만 재개한다.

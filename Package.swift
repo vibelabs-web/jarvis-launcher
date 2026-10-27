@@ -13,6 +13,8 @@ let package = Package(
     targets: [
         .target(name: "JARVISCore", swiftSettings: [.unsafeFlags(["-enable-testing"])]),
         .executableTarget(name: "JARVISLauncher", dependencies: ["JARVISCore"]),
+        // Claude Code UserPromptSubmit 훅: 프롬프트를 SQLite에 기록(ADR-8). 표준 출력에 아무것도 쓰지 않는다.
+        .executableTarget(name: "JARVISPromptHook", dependencies: ["JARVISCore"]),
         // 실제 Orca 대상 E2E(화면 없음). 자신이 만든 테스트 터미널에만 보낸다: `swift run JARVISE2E`
         .executableTarget(name: "JARVISE2E", dependencies: ["JARVISCore"]),
         // 받아쓰기 예비 벤치마크(앱과 같은 WhisperCLIRecognizer 경로): `swift run JARVISBench`

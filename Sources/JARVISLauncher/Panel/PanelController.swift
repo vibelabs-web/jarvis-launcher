@@ -17,6 +17,8 @@ final class PanelController {
     private let panel: PromptPanel
     private let model: AppModel
     private var bag: Set<AnyCancellable> = []
+    /// 프롬프트 전체 보기 창(⌘⇧E)
+    private var fullWindow: NSWindow?
     static let width: CGFloat = 680
 
     init(model: AppModel) {
@@ -58,6 +60,8 @@ final class PanelController {
         ])
         panel.contentView = blur
         model.onRequestHide = { [weak self] in self?.hide() }
+        model.onOpenFullView = { [weak self] in self?.openFullView() }
+        model.onCloseFullView = { [weak self] in self?.closeFullView() }
         // 목록·결과 줄·새 프로젝트 카드가 열리고 닫힐 때 높이를 맞춘다(위쪽 모서리 고정)
         model.objectWillChange
             .receive(on: RunLoop.main)
@@ -91,7 +95,40 @@ final class PanelController {
         }
     }
 
+    func openFullView() {
+        if let w = fullWindow { w.makeKeyAndOrderFront(nil); return }
+        let w = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 700),
+                         styleMask: [.titled, .closable, .resizable, .miniaturizable], backing: .buffered, defer: false)
+        w.title = "프롬프트 전체 보기"
+        w.isReleasedWhenClosed = false
+        // 패널(.floating)보다 위
+        w.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
+        w.contentView = NSHostingView(rootView: PromptFullView(model: model))
+        if let vf = (panel.screen ?? NSScreen.main)?.visibleFrame {
+            let size = CGSize(width: min(900, vf.width - 40), height: min(700, vf.height - 40))
+            w.setFrame(NSRect(x: vf.midX - size.width / 2, y: vf.midY - size.height / 2, width: size.width, height: size.height), display: false)
+        }
+        NotificationCenter.default.addObserver(forName: NSWindow.willCloseNotification, object: w, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.fullWindowDidClose() }
+        }
+        fullWindow = w
+        NSApp.activate(ignoringOtherApps: true)
+        w.makeKeyAndOrderFront(nil)
+        model.focusTick += 1
+        Diagnostics.log("fullview.open chars=\(model.session.original.count)")
+    }
+
+    func closeFullView() {
+        fullWindow?.close()  // willClose 알림에서 정리한다
+    }
+
+    private func fullWindowDidClose() {
+        fullWindow = nil
+        if panel.isVisible { panel.makeKeyAndOrderFront(nil); model.focusTick += 1 }
+    }
+
     func hide() {
+        closeFullView()
         panel.orderOut(nil)
         model.panelDidHide()
         Diagnostics.log("panel.hide")

@@ -457,3 +457,67 @@ struct TaskStructurerProhibitionRequest {
         #expect(!TaskStructurer.requestsProhibition("모바일에서도 깨지지 않게 확인해 줘"))
     }
 }
+
+@Suite("프롬프트 기록 (SQLite)")
+struct PromptLogTests {
+    func tempLog() throws -> PromptLog {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("jl-promptlog-\(UUID().uuidString)")
+        return try PromptLog(url: dir.appendingPathComponent("prompts.sqlite"))
+    }
+    let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+
+    @Test("기록·최신순 조회, 세션 첫 프롬프트 표시, 프로젝트 이름은 폴더명")
+    func recordAndFirst() throws {
+        let log = try tempLog()
+        try log.record(prompt: "가계부 앱 만들어 줘", sessionId: "s1", cwd: "/x/money-app", at: t0)
+        try log.record(prompt: "차트 추가해 줘", sessionId: "s1", cwd: "/x/money-app", at: t0 + 60)
+        try log.record(prompt: "README 써 줘", sessionId: "s2", cwd: "/x/blog", at: t0 + 120)
+        #expect(try log.record(prompt: "   ", sessionId: "s2", cwd: "/x/blog") == false)
+        let all = try log.entries()
+        #expect(all.map(\.text) == ["README 써 줘", "차트 추가해 줘", "가계부 앱 만들어 줘"])
+        #expect(all.map(\.isFirst) == [true, false, true])
+        #expect(try log.projects() == ["blog", "money-app"])
+        #expect(try log.entries(project: "money-app").count == 2)
+        #expect(try log.entries(firstOnly: true).count == 2)
+        #expect(try log.entries(search: "차트").map(\.text) == ["차트 추가해 줘"])
+    }
+
+    @Test("JARVIS 전송과 짝지어 받아쓴 원문을 붙인다(같은 글, 5분 이내)")
+    func pairing() throws {
+        let log = try tempLog()
+        let sent = "목표: 날짜 필터 수정\n\n할 일\n1. 원인 찾기"
+        try log.recordLauncherSend(text: sent, transcript: "음 날짜 필터 고쳐 줘", project: "sales", skill: nil, outcome: "delivered", at: t0)
+        try log.record(prompt: sent, sessionId: "s", cwd: "/x/sales", at: t0 + 2)
+        try log.record(prompt: sent, sessionId: "s", cwd: "/x/sales", at: t0 + 3600)  // 한 시간 뒤 같은 글은 짝 아님
+        let e = try log.entries()
+        #expect(e.first?.viaLauncher == false && e.first?.transcript == nil)
+        #expect(e.last?.viaLauncher == true && e.last?.transcript == "음 날짜 필터 고쳐 줘")
+    }
+
+    @Test("비밀키처럼 보이는 값은 가려서 저장, 일시 중지면 기록 안 함, 삭제")
+    func maskPauseDelete() throws {
+        let log = try tempLog()
+        try log.record(prompt: "api_key=sk-abc123 로 호출해 줘", sessionId: "s", cwd: "/x/a", at: t0)
+        #expect(try log.entries().first?.text.contains("sk-abc123") == false)
+        log.setPaused(true)
+        #expect(try log.record(prompt: "기록되면 안 됨", sessionId: "s", cwd: "/x/a") == false)
+        log.setPaused(false)
+        try log.delete(ids: try log.entries().map(\.id))
+        #expect(try log.entries().isEmpty)
+    }
+
+    @Test("마크다운: 프로젝트별·시간순, ★ 최초, 받아쓴 원문, 백틱 울타리")
+    func markdown() {
+        let es = [
+            PromptEntry(id: 2, time: t0 + 60, sessionId: "s", cwd: "/x/a", project: "a", text: "두 번째 ```code```", isFirst: false, viaLauncher: true, transcript: "두 번째라고 말함"),
+            PromptEntry(id: 1, time: t0, sessionId: "s", cwd: "/x/a", project: "a", text: "처음", isFirst: true, viaLauncher: false, transcript: nil),
+        ]
+        let md = PromptLog.markdown(es, now: t0)
+        #expect(md.contains("## a"))
+        #expect(md.range(of: "처음")!.lowerBound < md.range(of: "두 번째")!.lowerBound)
+        #expect(md.contains("★ 최초 프롬프트"))
+        #expect(md.contains("· JARVIS"))
+        #expect(md.contains("````\n두 번째 ```code```\n````"))
+        #expect(md.contains("<details><summary>받아쓴 원문</summary>\n\n두 번째라고 말함"))
+    }
+}

@@ -10,6 +10,7 @@ struct SettingsView: View {
             GeneralSettings(model: model).tabItem { Label("일반", systemImage: "gearshape") }
             ProjectSettings(model: model).tabItem { Label("프로젝트", systemImage: "folder") }
             ModelSettings(model: model).tabItem { Label("모델", systemImage: "cpu") }
+            PromptLogView(model: model).tabItem { Label("프롬프트 기록", systemImage: "text.book.closed") }
             DiagnosticsSettings(model: model).tabItem { Label("진단", systemImage: "stethoscope") }
         }
         .padding(16)

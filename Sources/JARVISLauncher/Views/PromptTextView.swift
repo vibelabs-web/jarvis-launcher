@@ -8,9 +8,27 @@ import JARVISCore
 final class ComposerTextView: NSTextView {
     weak var model: AppModel?
     var onCommitMarked: (() -> Void)?
+    /// 전체 보기 창의 편집기: Esc는 창 닫기, ⌘↵는 보내고 닫기, 트리거 목록 없음
+    var isFullView = false
 
     override func keyDown(with event: NSEvent) {
         guard let model else { super.keyDown(with: event); return }
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 14, flags.contains(.command), !hasMarkedText() {  // ⌘E 크게 보기, ⌘⇧E 전체 보기
+            if flags.contains(.shift) { isFullView ? model.onCloseFullView?() : model.onOpenFullView?() }
+            else if !isFullView { model.toggleExpanded() }
+            return
+        }
+        if isFullView {
+            if !hasMarkedText(), event.keyCode == 53 { model.onCloseFullView?(); return }
+            if !hasMarkedText(), (event.keyCode == 36 || event.keyCode == 76), flags.contains(.command) {
+                model.onCloseFullView?()
+                model.submit()
+                return
+            }
+            super.keyDown(with: event)
+            return
+        }
         let listKeys: Set<UInt16> = [36, 76, 48, 125, 126]
         if hasMarkedText() {
             guard model.listKind != nil, listKeys.contains(event.keyCode) else { super.keyDown(with: event); return }
@@ -35,8 +53,11 @@ final class ComposerTextView: NSTextView {
 struct PromptTextView: NSViewRepresentable {
     @ObservedObject var model: AppModel
     var placeholder = "무엇을 도와드릴까요?  @ 프로젝트 · / 스킬 · ⌘↵ 보내기"
+    var fontSize: CGFloat = 15
+    /// 전체 보기 창용(줄 간격을 넓히고 트리거 목록을 쓰지 않음)
+    var fullView = false
 
-    func makeCoordinator() -> Coordinator { Coordinator(model: model) }
+    func makeCoordinator() -> Coordinator { Coordinator(model: model, fullView: fullView) }
 
     func makeNSView(context: Context) -> NSScrollView {
         let scroll = NSScrollView()
@@ -47,8 +68,16 @@ struct PromptTextView: NSViewRepresentable {
 
         let tv = ComposerTextView()
         tv.model = model
+        tv.isFullView = fullView
         tv.delegate = context.coordinator
-        tv.font = .systemFont(ofSize: 15)
+        tv.font = .systemFont(ofSize: fontSize)
+        if fullView {
+            let ps = NSMutableParagraphStyle()
+            ps.lineHeightMultiple = 1.3
+            tv.defaultParagraphStyle = ps
+            tv.typingAttributes[.paragraphStyle] = ps
+            tv.textContainerInset = NSSize(width: 14, height: 12)
+        }
         tv.textColor = .labelColor
         tv.drawsBackground = false
         tv.isRichText = false
@@ -56,7 +85,7 @@ struct PromptTextView: NSViewRepresentable {
         tv.isAutomaticQuoteSubstitutionEnabled = false
         tv.isAutomaticDashSubstitutionEnabled = false
         tv.isAutomaticTextReplacementEnabled = false
-        tv.textContainerInset = NSSize(width: 4, height: 6)
+        if !fullView { tv.textContainerInset = NSSize(width: 4, height: 6) }
         tv.isVerticallyResizable = true
         tv.isHorizontallyResizable = false
         tv.autoresizingMask = [.width]
@@ -74,7 +103,7 @@ struct PromptTextView: NSViewRepresentable {
     private func makePlaceholder(in tv: NSTextView) -> NSTextField {
         let label = NSTextField(labelWithString: placeholder)
         label.textColor = .placeholderTextColor
-        label.font = .systemFont(ofSize: 15)
+        label.font = .systemFont(ofSize: fontSize)
         label.translatesAutoresizingMaskIntoConstraints = false
         tv.addSubview(label)
         NSLayoutConstraint.activate([
@@ -115,13 +144,15 @@ struct PromptTextView: NSViewRepresentable {
         weak var placeholderView: NSTextField?
         var lastFocusTick = -1
         var applyingModel = false
+        let fullView: Bool
 
-        init(model: AppModel) { self.model = model }
+        init(model: AppModel, fullView: Bool) { self.model = model; self.fullView = fullView }
 
         func push() {
             guard let tv = textView else { return }
             MainActor.assumeIsolated {
-                model.textChanged(tv.string, caret: tv.selectedRange().location)
+                if fullView { model.fullViewTextChanged(tv.string, caret: tv.selectedRange().location) }
+                else { model.textChanged(tv.string, caret: tv.selectedRange().location) }
             }
         }
 
@@ -137,6 +168,11 @@ struct PromptTextView: NSViewRepresentable {
 
         func textViewDidChangeSelection(_ notification: Notification) {
             guard let tv = textView, !applyingModel, !tv.hasMarkedText() else { return }
+            if fullView {
+                MainActor.assumeIsolated { model.caretUTF16 = tv.selectedRange().location }
+                if MainActor.assumeIsolated({ model.session.original != tv.string }) { push() }
+                return
+            }
             MainActor.assumeIsolated {
                 if model.session.original != tv.string {
                     model.textChanged(tv.string, caret: tv.selectedRange().location)
