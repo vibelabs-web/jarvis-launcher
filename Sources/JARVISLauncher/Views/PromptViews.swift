@@ -182,7 +182,12 @@ struct ChipListView: View {
                 Text(model.listKind == .project ? "보낼 프로젝트" : "스킬 (파일·Orca 목록 기준, 전체 목록 아님)")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 if !model.listQuery.isEmpty { Text("“\(model.listQuery)”").font(.caption).foregroundStyle(.secondary) }
-                Text(model.listKind == .skill && items.count >= 60 ? "상위 60개" : "\(items.count)개").font(.caption2).foregroundStyle(.tertiary)
+                if model.listNoMatch {
+                    Text("맞는 스킬 없음").font(.caption2).foregroundStyle(.orange)
+                } else {
+                    Text(model.listKind == .skill && !items.isEmpty ? "\(model.highlight + 1)/\(items.count)" : "\(items.count)개")
+                        .font(.caption2.monospacedDigit()).foregroundStyle(.tertiary)
+                }
                 Spacer()
                 Text("↑↓ 이동 · ↵ 선택 · esc 닫기").font(.caption2).foregroundStyle(.tertiary)
             }
@@ -205,7 +210,10 @@ struct ChipListView: View {
                     .padding(.horizontal, 4).padding(.bottom, 4)
                 }
                 .frame(height: min(CGFloat(items.count), 6) * 40)
-                .onChange(of: model.highlight) { _, h in proxy.scrollTo(h) }
+                // 철자를 칠 때마다 맞는 줄로 강조가 옮겨 가고, 그 줄이 목록 가운데 보이도록 스크롤한다
+                .onChange(of: model.highlight) { _, h in proxy.scrollTo(h, anchor: .center) }
+                .onChange(of: model.listQuery) { _, _ in proxy.scrollTo(model.highlight, anchor: .center) }
+                .onAppear { proxy.scrollTo(model.highlight, anchor: .center) }
             }
         }
         .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor).opacity(0.85)))

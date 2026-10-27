@@ -62,3 +62,16 @@ public enum HangulKeys {
         return sawHangul ? out.lowercased() : nil
     }
 }
+
+extension SkillSearch {
+    /// 목록은 그대로 두고 입력한 철자에 가장 잘 맞는 줄의 위치를 돌려준다(타이핑으로 찾아가기). 없으면 nil.
+    public static func bestIndex(in skills: [SkillEntry], query: String) -> Int? {
+        guard !query.isEmpty, let best = rank(skills, query: query).first else { return nil }
+        return skills.firstIndex { $0.id == best.id }
+    }
+
+    /// 목록 표시 순서: 호출 이름 알파벳순
+    public static func displayOrder(_ skills: [SkillEntry]) -> [SkillEntry] {
+        skills.sorted { $0.invocation.lowercased() < $1.invocation.lowercased() }
+    }
+}

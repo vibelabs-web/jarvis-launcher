@@ -94,3 +94,23 @@ struct SkillSearchTests {
         #expect(SkillSearch.rank(all, query: "ㅐㄱㅊ").map(\.name) == ["orca-cli"])
     }
 }
+
+@Suite("/ 스킬 목록: 타이핑으로 찾아가기")
+struct SkillTypeAheadTests {
+    func skill(_ name: String, _ desc: String = "") -> SkillEntry {
+        SkillEntry(name: name, invocation: "/\(name)", description: desc, source: .personal, availability: .fileVerified, note: "", location: nil)
+    }
+
+    @Test("목록은 그대로, 철자를 칠수록 맞는 줄로 이동")
+    func jump() {
+        let list = SkillSearch.displayOrder(["writing-studio-loop", "orca-cli", "audit", "orchestrate", "orca-harness", "memory"].map { skill($0) })
+        #expect(list.map(\.name) == ["audit", "memory", "orca-cli", "orca-harness", "orchestrate", "writing-studio-loop"])
+        #expect(SkillSearch.bestIndex(in: list, query: "o") == 2)
+        #expect(SkillSearch.bestIndex(in: list, query: "orch") == 4)
+        #expect(SkillSearch.bestIndex(in: list, query: "orca-h") == 3)
+        #expect(SkillSearch.bestIndex(in: list, query: "w") == 5)
+        #expect(SkillSearch.bestIndex(in: list, query: "ㅐㄱㅊㅁ-ㅗ") == 3)
+        #expect(SkillSearch.bestIndex(in: list, query: "zzz") == nil)
+        #expect(SkillSearch.bestIndex(in: list, query: "") == nil)
+    }
+}

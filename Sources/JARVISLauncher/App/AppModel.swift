@@ -58,6 +58,8 @@ final class AppModel: ObservableObject {
     @Published var listKind: TriggerKind?
     @Published var listQuery = ""
     @Published var highlight = 0
+    /// 스킬 목록에서 입력한 철자에 맞는 줄이 없음
+    @Published var listNoMatch = false
     /// 입력 중 트리거로 연 경우의 토큰(선택하면 지운다)
     var activeTrigger: ActiveTrigger?
 
@@ -193,7 +195,7 @@ final class AppModel: ObservableObject {
         if let t = TriggerParser.active(in: text, caretUTF16: caret) {
             activeTrigger = t
             if listKind != t.kind { listKind = t.kind; setHighlight(0) }
-            if listQuery != t.query { listQuery = t.query; setHighlight(0) }
+            if listQuery != t.query { listQuery = t.query; followQuery() }
             if t.kind == .skill && skills.isEmpty { Task { await loadSkills() } }
         } else if activeTrigger != nil {
             activeTrigger = nil
@@ -201,6 +203,15 @@ final class AppModel: ObservableObject {
         }
         if status?.kind == .ok { status = nil }
         scheduleSuggestion()
+    }
+
+    /// 검색어가 바뀌면: 프로젝트는 걸러진 목록의 맨 위, 스킬은 목록을 그대로 두고 가장 잘 맞는 줄로 이동
+    private func followQuery() {
+        guard listKind == .skill else { setHighlight(0); return }
+        let best = SkillSearch.bestIndex(in: skills, query: listQuery)
+        if listNoMatch != (best == nil && !listQuery.isEmpty) { listNoMatch.toggle() }
+        if let best { setHighlight(best) } else if listQuery.isEmpty { setHighlight(0) }
+        Diagnostics.log("list.follow kind=skill queryLen=\(listQuery.count) index=\(best.map(String.init) ?? "none") of=\(skills.count)")
     }
 
     /// 같은 값이면 발행하지 않는다(불필요한 다시 그리기 방지)
@@ -214,18 +225,41 @@ final class AppModel: ObservableObject {
         }
     }
 
+    /// 칩을 누르면 커서 자리에 `@`·`/`를 넣어, 이어서 치는 철자가 곧바로 검색어가 되게 한다.
     func openList(_ kind: TriggerKind) {
-        if listKind == kind && activeTrigger == nil { closeList(); return }
-        activeTrigger = nil
+        if listKind == kind {
+            // 다시 누르면 닫는다. 검색어 없이 넣어 둔 기호만 있으면 함께 지운다.
+            if let t = activeTrigger, t.query.isEmpty {
+                let (text, caret) = TriggerParser.removing(t, from: session.original)
+                session.original = text
+                pendingCaret = caret
+            }
+            activeTrigger = nil
+            closeList()
+            focusTick += 1
+            return
+        }
+        let ns = session.original as NSString
+        let caret = min(caretUTF16 ?? ns.length, ns.length)
+        let needsSpace = caret > 0 && !CharacterSet.whitespacesAndNewlines.contains(UnicodeScalar(ns.character(at: caret - 1)) ?? " ")
+        let insert = (needsSpace ? " " : "") + (kind == .project ? "@" : "/")
+        let text = ns.replacingCharacters(in: NSRange(location: caret, length: 0), with: insert)
+        let newCaret = caret + (insert as NSString).length
+        session.original = text
+        caretUTF16 = newCaret
+        pendingCaret = newCaret
+        activeTrigger = TriggerParser.active(in: text, caretUTF16: newCaret)
         listKind = kind
         listQuery = ""
-        highlight = 0
+        setHighlight(0)
+        listNoMatch = false
         if kind == .skill && skills.isEmpty { Task { await loadSkills() } }
         if kind == .project { Task { await refreshOrca() } }
         focusTick += 1
     }
 
     func closeList() {
+        if listNoMatch { listNoMatch = false }
         if listKind != nil { listKind = nil }
         if !listQuery.isEmpty { listQuery = "" }
         setHighlight(0)
@@ -363,7 +397,7 @@ final class AppModel: ObservableObject {
             }
             return items
         case .skill:
-            return SkillSearch.rank(skills, query: listQuery).prefix(60).map { s in
+            return skills.map { s in
                 ListItem(id: "s-\(s.id)", title: s.invocation, subtitle: s.description.isEmpty ? s.note : s.description,
                          badge: "\(s.source.rawValue) · \(s.availability.rawValue)", enabled: s.callable, action: .skill(s.id))
             }
@@ -615,7 +649,8 @@ final class AppModel: ObservableObject {
 
     func loadSkills() async {
         let orcaSkills = (try? await orca?.installedSkills()) ?? []
-        skills = SkillCatalog.discover(roots: .init(), projectPath: selectedProject?.canonicalPath, orcaSkills: orcaSkills)
+        skills = SkillSearch.displayOrder(SkillCatalog.discover(roots: .init(), projectPath: selectedProject?.canonicalPath, orcaSkills: orcaSkills))
+        if listKind == .skill && !listQuery.isEmpty { followQuery() }
         if let id = selectedSkillID, !skills.contains(where: { $0.id == id }) { selectedSkillID = nil }
     }
 
