@@ -58,6 +58,8 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var llmModelPath: String = ""
     public var useLLM: Bool = true
     public var clearInputAfterSend: Bool = true
+    /// 다음 호출 때 프로젝트 칩에 미리 채울 마지막 대상
+    public var lastProjectID: UUID?
 
     public init() {}
 
@@ -74,6 +76,7 @@ public struct Preferences: Codable, Equatable, Sendable {
         p.llmModelPath = (try? c.decode(String.self, forKey: .llmModelPath)) ?? p.llmModelPath
         p.useLLM = (try? c.decode(Bool.self, forKey: .useLLM)) ?? p.useLLM
         p.clearInputAfterSend = (try? c.decode(Bool.self, forKey: .clearInputAfterSend)) ?? p.clearInputAfterSend
+        p.lastProjectID = try? c.decode(UUID.self, forKey: .lastProjectID)
         self = p
     }
 }

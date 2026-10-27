@@ -38,6 +38,13 @@ public struct ComposerSession: Equatable, Sendable {
 
     /// 뒤로 가기: 편집본은 버리고 원문만 남긴다.
     public mutating func back() { finalText = nil }
+
+    /// 전송 문자열. 스킬이 고정돼 있으면 `"/스킬 본문"`, 아니면 본문 그대로. 본문 자체는 바꾸지 않는다.
+    public static func outgoing(text: String, skillInvocation: String?) -> String {
+        let body = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let skill = skillInvocation, !skill.isEmpty else { return body }
+        return body.isEmpty ? skill : "\(skill) \(body)"
+    }
 }
 
 public enum PanelGeometry {

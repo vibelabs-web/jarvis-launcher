@@ -1,97 +1,111 @@
 import SwiftUI
 import JARVISCore
 
-// MARK: - 새 프로젝트 (PRD 4.4)
-
-struct NewProjectView: View {
+/// 새 프로젝트 확인 카드(PRD 4.4). 같은 창 안에서 펼친다. 폴더 이름은 반드시 확인받는다.
+struct NewProjectCard: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ReviewHeader(model: model, title: "새 프로젝트 시작")
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 6) {
-                GridRow {
-                    Text("기본 상위 경로").foregroundStyle(.secondary)
-                    HStack {
-                        Text(model.prefs.defaultParentFolder.isEmpty ? "설정되지 않음" : model.prefs.defaultParentFolder)
-                            .lineLimit(1).truncationMode(.middle)
-                        Button("변경") { chooseParent() }.disabled(locked)
-                    }
-                }
-                GridRow {
-                    Text("새 폴더 이름").foregroundStyle(.secondary)
-                    HStack {
-                        TextField("reading-notes", text: $model.newName).frame(width: 220).disabled(locked)
-                        ForEach(model.meta?.nameSuggestions ?? [], id: \.self) { n in
-                            Button(n) { model.newName = n }.buttonStyle(.link).disabled(locked)
+        VStack(alignment: .leading, spacing: 8) {
+            if model.composingMeta && model.meta == nil {
+                HStack { ProgressView().controlSize(.small); Text("메타 프롬프트 정리 중…").font(.callout) }
+            } else {
+                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 5) {
+                    GridRow {
+                        Text("상위 폴더").foregroundStyle(.secondary)
+                        HStack {
+                            Text(model.prefs.defaultParentFolder.isEmpty ? "설정되지 않음" : model.shortPath(model.prefs.defaultParentFolder))
+                                .lineLimit(1).truncationMode(.middle)
+                            Button("변경") { chooseParent() }.disabled(locked).controlSize(.small)
                         }
                     }
-                }
-                GridRow {
-                    Text("최종 경로").foregroundStyle(.secondary)
-                    switch model.newFolderPlan {
-                    case .success(let url): Text(url.path).textSelection(.enabled).lineLimit(1).truncationMode(.middle)
-                    case .failure(let e):
-                        if case .alreadyExists = e, model.creationCanResume { Text(model.creation?.folderPath ?? "").lineLimit(1) }
-                        else { Text(e.localizedDescription).foregroundStyle(.orange) }
+                    GridRow {
+                        Text("폴더 이름").foregroundStyle(.secondary)
+                        HStack {
+                            TextField("reading-notes", text: $model.newName).frame(width: 200).disabled(locked)
+                            ForEach(model.meta?.nameSuggestions ?? [], id: \.self) { n in
+                                Button(n) { model.newName = n }.buttonStyle(.link).disabled(locked)
+                            }
+                        }
                     }
+                    GridRow {
+                        Text("최종 경로").foregroundStyle(.secondary)
+                        pathText
+                    }
+                    GridRow { Text("Git 초기화").foregroundStyle(.secondary); Text(gitInitText).foregroundStyle(.secondary) }
                 }
-                GridRow { Text("Claude 모드").foregroundStyle(.secondary); Text("Plan (고정) · 새 Orca 터미널") }
-                GridRow { Text("Git 초기화").foregroundStyle(.secondary); Text(gitInitText) }
-            }
-            .font(.callout)
-            HStack {
-                Text("메타 프롬프트 (편집 가능)").font(.caption).foregroundStyle(.secondary)
-                if let m = model.meta { Text(m.source == "llm" ? "· 로컬 모델 정리" : "· 기본 템플릿").font(.caption).foregroundStyle(.secondary) }
-            }
-            TextEditor(text: $model.metaText)
-                .font(.system(size: 13, design: .monospaced))
-                .scrollContentBackground(.hidden)
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor).opacity(0.55)))
-                .frame(minHeight: 150)
-                .disabled(locked)
-            ForEach(model.meta?.preservationWarnings ?? [], id: \.self) { w in
-                Label(w, systemImage: "exclamationmark.bubble").font(.caption).foregroundStyle(.orange)
-            }
-            if let cp = model.creation { StepsView(checkpoint: cp, running: model.phase == .creating && model.creationMessage == nil && model.outcome == nil) }
-            if let msg = model.creationMessage { Label(msg, systemImage: "pause.circle.fill").font(.callout).foregroundStyle(.orange) }
-            OutcomeLine(outcome: model.outcome)
-            HStack {
-                Button("뒤로") { model.backToCompose() }.disabled(model.phase == .creating && model.creationMessage == nil && model.outcome == nil)
-                Spacer()
-                if case .delivered = model.outcome {
-                    Button("완료") { model.reset(clear: model.prefs.clearInputAfterSend) }.buttonStyle(.borderedProminent)
-                } else if model.creationCanResume && model.creation?.needsGitInit == true && model.creation?.gitInitApproved != true {
-                    Button("Orca에서 열기") { model.openInOrca() }
-                    Button("Git 초기화 후 등록 (승인)") { model.approveGitInitAndResume() }
-                        .help("이 폴더에서만 git init을 실행한 뒤 Orca에 등록합니다. Orca에서 폴더를 직접 열었다면 '여기서 이어하기'를 누르세요")
-                    Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
-                } else if model.creationCanResume {
-                    Button("Orca에서 열기") { model.openInOrca() }
-                    Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
-                } else {
-                    Button("폴더/터미널 생성 후 전달") { model.startCreation() }
-                        .buttonStyle(.borderedProminent)
-                        .disabled(!canStart)
+                .font(.callout)
+                HStack {
+                    Text("메타 프롬프트 (편집 가능)").font(.caption).foregroundStyle(.secondary)
+                    if let m = model.meta { Text(m.source == "llm" ? "· 로컬 모델 정리" : "· 기본 템플릿").font(.caption).foregroundStyle(.secondary) }
                 }
+                TextEditor(text: $model.metaText)
+                    .font(.system(size: 12, design: .monospaced))
+                    .scrollContentBackground(.hidden)
+                    .padding(4)
+                    .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor).opacity(0.5)))
+                    .frame(minHeight: 110, maxHeight: 150)
+                    .disabled(locked)
+                ForEach(model.meta?.preservationWarnings ?? [], id: \.self) { w in
+                    Label(w, systemImage: "exclamationmark.bubble").font(.caption).foregroundStyle(.orange)
+                }
+                if let cp = model.creation { StepsView(checkpoint: cp, running: model.phase == .creating) }
+                if let msg = model.creationMessage { Label(msg, systemImage: "pause.circle.fill").font(.callout).foregroundStyle(.orange) }
+                if model.creationDelivered { Label("새 터미널에 플랜 모드로 전달됨", systemImage: "checkmark.circle.fill").foregroundStyle(.green) }
+                buttons
+            }
+        }
+        .padding(10)
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color.secondary.opacity(0.08)))
+    }
+
+    @ViewBuilder var pathText: some View {
+        if let folder = model.creation?.folderPath {
+            Text(model.shortPath(folder)).lineLimit(1)
+        } else {
+            switch model.newFolderPlan {
+            case .success(let url): Text(model.shortPath(url.path)).lineLimit(1).truncationMode(.middle)
+            case .failure(let e): Text(e.localizedDescription).foregroundStyle(.orange).lineLimit(2)
+            }
+        }
+    }
+
+    @ViewBuilder var buttons: some View {
+        HStack {
+            Button("취소") { model.meta = nil; if model.creation?.folderPath == nil { model.creation = nil } }
+                .disabled(model.phase == .creating || model.creation?.folderPath != nil && !model.creationDelivered && !model.creationCanResume)
+            Spacer()
+            if model.creationDelivered {
+                Button("완료") { model.finishNewProject() }.buttonStyle(.borderedProminent)
+            } else if model.creationCanResume && model.creation?.needsGitInit == true && model.creation?.gitInitApproved != true {
+                Button("Orca에서 열기") { model.openInOrca() }
+                Button("Git 초기화 후 등록 (승인)") { model.approveGitInitAndResume() }
+                    .help("이 폴더에서만 git init을 실행한 뒤 Orca에 등록합니다. Orca에서 폴더를 직접 열었다면 '여기서 이어하기'를 누르세요")
+                Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
+            } else if model.creationCanResume {
+                Button("Orca에서 열기") { model.openInOrca() }
+                Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
+            } else {
+                Button("폴더·터미널 만들고 전달") { model.startCreation() }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(!canStart)
             }
         }
     }
 
     var locked: Bool { model.creation?.folderPath != nil }
 
-    var gitInitText: String {
-        guard let cp = model.creation else { return "하지 않음 (Orca가 요구하면 별도로 승인을 묻습니다)" }
-        if cp.gitInitialized == true { return "승인 후 초기화함" }
-        if cp.needsGitInit == true { return "필요 — Orca는 Git 저장소만 등록합니다. 아래 버튼으로 승인해야 진행합니다" }
-        return "하지 않음"
-    }
-
     var canStart: Bool {
-        guard model.phase == .reviewNew, model.creation == nil else { return false }
+        guard model.phase == .compose, model.creation?.folderPath == nil else { return false }
         if case .success = model.newFolderPlan { return !model.metaText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
         return false
+    }
+
+    var gitInitText: String {
+        guard let cp = model.creation else { return "하지 않음 (Orca가 요구하면 따로 승인을 묻습니다)" }
+        if cp.gitInitialized == true { return "승인 후 초기화함" }
+        if cp.needsGitInit == true { return "필요 — Orca는 Git 저장소만 등록합니다. 아래 버튼으로 승인해야 진행" }
+        return "하지 않음"
     }
 
     func chooseParent() {
@@ -111,71 +125,16 @@ struct StepsView: View {
     let checkpoint: CreationCheckpoint
     let running: Bool
     var body: some View {
-        HStack(spacing: 14) {
+        HStack(spacing: 12) {
             ForEach([CreationStep.folder, .orca, .terminal, .claudeReady, .prompt], id: \.self) { step in
                 let done = CreationStep.allCases.firstIndex(of: step)! < CreationStep.allCases.firstIndex(of: checkpoint.currentStep)!
                 let current = step == checkpoint.currentStep
-                HStack(spacing: 4) {
+                HStack(spacing: 3) {
                     if current && running { ProgressView().controlSize(.mini) }
                     else { Image(systemName: done ? "checkmark.circle.fill" : current ? "pause.circle" : "circle").foregroundStyle(done ? .green : .secondary) }
                     Text(step.label).font(.caption)
                 }
             }
         }
-    }
-}
-
-// MARK: - 스킬 (PRD 2.4)
-
-struct SkillPickerView: View {
-    @ObservedObject var model: AppModel
-    @State private var confirmedInferred = false
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            ReviewHeader(model: model, title: "스킬 호출")
-            TargetPicker(model: model)
-                .onChange(of: model.selectedProjectID) { _, _ in model.refreshSkillsForProject() }
-            HStack {
-                TextField("스킬 검색", text: $model.skillFilter).textFieldStyle(.roundedBorder)
-                Text("\(model.filteredSkills.count)개 · 파일·Orca 목록 기준(전체 목록 아님)").font(.caption).foregroundStyle(.secondary)
-            }
-            List(model.filteredSkills, selection: $model.selectedSkillID) { s in
-                HStack(alignment: .firstTextBaseline) {
-                    Text(s.invocation).font(.system(.body, design: .monospaced))
-                    Text(s.source.rawValue).font(.caption2).padding(.horizontal, 5).background(Capsule().fill(.quaternary))
-                    Text(s.availability.rawValue).font(.caption2)
-                        .foregroundStyle(s.availability == .blocked ? .red : s.availability == .inferred ? .orange : .green)
-                    Text(s.description).font(.caption).foregroundStyle(.secondary).lineLimit(1)
-                }
-                .tag(s.id)
-            }
-            .frame(minHeight: 150)
-            .onChange(of: model.selectedSkillID) { _, _ in confirmedInferred = false }
-            if let s = model.selectedSkill {
-                if !s.note.isEmpty { Text(s.note).font(.caption).foregroundStyle(.orange) }
-                HStack {
-                    Text("인자").foregroundStyle(.secondary)
-                    TextField("선택", text: $model.skillArgs).textFieldStyle(.roundedBorder)
-                }
-                Text("보낼 문자열: \(model.skillInvocation)").font(.system(.callout, design: .monospaced)).textSelection(.enabled)
-                if s.availability == .inferred {
-                    Toggle("이 세션에서 이 스킬을 쓸 수 있음을 직접 확인했습니다(/skills)", isOn: $confirmedInferred).font(.caption)
-                }
-            }
-            OutcomeLine(outcome: model.outcome)
-            HStack {
-                Button("뒤로") { model.backToCompose() }
-                Spacer()
-                Button("스킬 호출 전송") { model.sendSkill() }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!canSend)
-            }
-        }
-    }
-
-    var canSend: Bool {
-        guard let s = model.selectedSkill, s.callable, model.currentTarget != nil, model.phase == .reviewSkill else { return false }
-        return s.availability != .inferred || confirmedInferred
     }
 }

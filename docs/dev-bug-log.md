@@ -17,5 +17,6 @@
 | B11 | Claude가 종료되어 셸로 돌아왔는데도 화면 위쪽의 대화상자 문구 때문에 계속 '대화상자 대기'로 판정 | `ScreenClassifier`가 대화상자 패턴을 셸 프롬프트보다 먼저 봄 | 마지막 줄이 셸 프롬프트면 `notClaude` 우선. 새 프로젝트 흐름은 '종료됨'으로 멈추고 이어하기 때 같은 터미널에서 1회 재시작. 기동 직후 순간적인 셸 프롬프트는 4회 연속일 때만 종료로 봄 | `exitedToShell`, `claudeExitedRelaunch`, 기존 `resume` 회귀 테스트 |
 | B12 | (테스트 대행 결함) 폴더 신뢰 대화상자에 Enter만 보내 'No, exit'가 선택됨 | 기본 선택이 'No, exit'인데 확인하지 않음 | 대행 응답을 ↓ + Enter로 수정, 대화상자 원문을 보고서에 기록 | 재실행에서 신뢰 후 정상 진행 |
 | B14 | 작가님 보고: "런처 프로젝트만 연결되고 다른 터미널은 연결이 안 됨, Claude Code인데 아니라고 표시됨" | Orca가 Claude 세션 대부분의 `agentIdentity`를 비워(null) 보냄(실측 7개 중 1개만 `claude`, 처음 조사 때 `claude`였던 vibelabs-obs도 null로 바뀜). 앱이 이 값 하나에만 의존 | 값이 비면 화면을 읽어 Claude 프롬프트(❯)와 상태줄(`shift+tab`, `bypass permissions` 등)로 판별. 전송 직전 재검증도 화면 판별을 허용. Orca 탭과 분리된(orphaned) Claude 터미널은 경고와 함께 연결 허용. 설정 표에 프로젝트(폴더명)·세션 제목 열 추가 | `ScreenDetectedClaudeTests` 3건 통과. 실 Orca 재조회에서 Claude 5개 판별(Orca 1 + 화면 4) |
+| B15 | 받아쓰기 결과가 항상 입력 끝에 붙음 | 예전 SwiftUI `TextEditor`는 커서 위치를 알려 주지 않아 `cursorUTF16`이 늘 nil이었음 | `NSTextView` 기반 입력창(`PromptTextView`)이 커서 위치를 모델에 전달하고, 받아쓰기 뒤 커서를 삽입 끝으로 옮김 | 패널 재설계와 함께 반영. 작가님 수동 확인 12번 |
 
 참고: AC-01 자동 반복 스크립트는 작가님 화면에서 패널을 깜박이게 해서 폐기했다. AC-01은 작가님이 직접 누른 기록을 집계해 검증한다.

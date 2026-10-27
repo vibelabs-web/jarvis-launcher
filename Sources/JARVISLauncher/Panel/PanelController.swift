@@ -1,4 +1,5 @@
 import AppKit
+import Combine
 import SwiftUI
 import JARVISCore
 
@@ -15,6 +16,7 @@ final class PromptPanel: NSPanel {
 final class PanelController {
     private let panel: PromptPanel
     private let model: AppModel
+    private var bag: Set<AnyCancellable> = []
     static let width: CGFloat = 680
 
     init(model: AppModel) {
@@ -55,8 +57,15 @@ final class PanelController {
             host.bottomAnchor.constraint(equalTo: blur.bottomAnchor),
         ])
         panel.contentView = blur
-        model.onPanelHeightChange = { [weak self] h in self?.resize(height: h) }
         model.onRequestHide = { [weak self] in self?.hide() }
+        // 목록·결과 줄·새 프로젝트 카드가 열리고 닫힐 때 높이를 맞춘다(위쪽 모서리 고정)
+        model.objectWillChange
+            .receive(on: RunLoop.main)
+            .sink { [weak self] _ in
+                guard let self else { return }
+                if abs(self.panel.frame.height - self.model.panelHeight) > 1 { self.resize(height: self.model.panelHeight) }
+            }
+            .store(in: &bag)
     }
 
     var isVisible: Bool { panel.isVisible }

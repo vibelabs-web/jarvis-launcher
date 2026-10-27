@@ -1,37 +1,42 @@
 import SwiftUI
 import JARVISCore
 
+/// 한 화면 컴포저: 입력창 · 대상 요약 · (칩 위 목록) · 칩 줄 · 결과 한 줄 · (새 프로젝트 카드)
 struct PromptRootView: View {
     @ObservedObject var model: AppModel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 8) {
             header
-            Group {
-                switch model.phase {
-                case .compose, .recording, .transcribing, .classifying: ComposeView(model: model)
-                case .reviewExisting, .sending: ExistingReviewView(model: model)
-                case .reviewNew, .creating: NewProjectView(model: model)
-                case .reviewSkill: SkillPickerView(model: model)
-                case .result: ResultView(model: model)
-                }
+            PromptTextView(model: model)
+                .frame(minHeight: 96, maxHeight: 150)
+                .padding(6)
+                .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .textBackgroundColor).opacity(0.5)))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.25)))
+            if let summary = model.targetSummary {
+                Text(summary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal, 4)
+                    .accessibilityLabel("보낼 대상: \(summary)")
             }
-            if let n = model.notice {
-                Label(n, systemImage: "exclamationmark.triangle.fill")
-                    .font(.callout)
-                    .foregroundStyle(.orange)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .accessibilityIdentifier("notice")
-            }
+            if model.listKind != nil { ChipListView(model: model) }
+            ChipBar(model: model)
+            if let s = model.status { StatusLineView(model: model, line: s) }
+            if model.showNewProjectCard { NewProjectCard(model: model) }
         }
-        .padding(20)
+        .padding(.horizontal, 16)
+        .padding(.top, 12)
+        .padding(.bottom, 12)
         .frame(width: PanelController.width, alignment: .topLeading)
         .frame(maxHeight: .infinity, alignment: .top)
     }
 
     var header: some View {
         HStack(spacing: 8) {
-            Text("JARVIS").font(.headline).tracking(1.5)
+            Text("JARVIS").font(.subheadline.weight(.semibold)).tracking(1.5)
             StatusDot(status: model.menuStatus)
             Text(model.statusLabel).font(.caption).foregroundStyle(.secondary)
             Spacer()
@@ -48,238 +53,219 @@ struct StatusDot: View {
     var body: some View {
         Circle()
             .fill(status == .ready ? Color.green : status == .attention ? Color.yellow : Color.gray)
-            .frame(width: 8, height: 8)
+            .frame(width: 7, height: 7)
             .accessibilityLabel(status == .ready ? "준비" : status == .attention ? "재확인 필요" : "연결 끊김")
     }
 }
 
-// MARK: - 입력
+// MARK: - 칩 줄
 
-struct ComposeView: View {
+struct ChipBar: View {
     @ObservedObject var model: AppModel
-    @FocusState private var focused: Bool
-
-    var busy: Bool { model.phase == .transcribing || model.phase == .classifying }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("무엇을 도와드릴까요?").font(.title3.weight(.semibold))
-            TextEditor(text: $model.session.original)
-                .font(.system(size: 15))
-                .scrollContentBackground(.hidden)
-                .padding(8)
-                .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .textBackgroundColor).opacity(0.55)))
-                .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.3)))
-                .frame(minHeight: 90, maxHeight: 130)
-                .focused($focused)
-                .disabled(busy)
-                .accessibilityIdentifier("promptInput")
-            if model.session.isOverSoftLimit {
-                Text("입력이 \(model.session.original.count)자입니다(권장 \(ComposerSession.softLimit)자). 잘라내지 않으니 필요하면 줄여 주세요.")
-                    .font(.caption).foregroundStyle(.orange)
+        HStack(spacing: 6) {
+            projectChip
+            Button { model.toggleRecording() } label: {
+                Image(systemName: model.phase == .recording ? "stop.circle.fill" : "mic")
+                    .foregroundStyle(model.phase == .recording ? Color.red : Color.primary)
+                    .frame(width: 26, height: 24)
             }
-            HStack(spacing: 8) {
-                Button { model.toggleRecording() } label: {
-                    Label(model.phase == .recording ? "녹음 중지" : "받아쓰기",
-                          systemImage: model.phase == .recording ? "stop.circle.fill" : "mic")
-                }
-                .tint(model.phase == .recording ? .red : nil)
-                .accessibilityLabel(model.phase == .recording ? "녹음 중지" : "받아쓰기")
-                .disabled(busy)
-                Button("기존 프로젝트") { routeTo(.existingProject) }.disabled(!model.session.canProceed || busy)
-                Button("새 프로젝트") { routeTo(.newProject) }.disabled(!model.session.canProceed || busy)
-                Button("스킬") { routeTo(.skill) }.disabled(busy)
-                Spacer()
-                if busy { ProgressView().controlSize(.small) }
-                if model.phase == .transcribing { Text("음성 변환 중…").font(.caption) }
-                if model.phase == .classifying { Text("분류 중…").font(.caption) }
-                Button("다음 단계 ⌘↵") { model.proceed() }
-                    .keyboardShortcut(.return, modifiers: .command)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(!model.session.canProceed || model.phase != .compose)
-            }
-            if model.phase == .recording {
-                Label("녹음 중 — 다시 누르면 받아 적습니다 (음성은 저장하지 않음)", systemImage: "waveform")
-                    .font(.caption).foregroundStyle(.red)
-            }
+            .buttonStyle(.borderless)
+            .disabled(model.phase != .compose && model.phase != .recording)
+            .help(model.phase == .recording ? "녹음 중지 — 받아 적기" : "받아쓰기(음성은 저장하지 않음)")
+            .accessibilityLabel(model.phase == .recording ? "녹음 중지" : "받아쓰기")
+            if model.phase == .recording { Text("녹음 중").font(.caption).foregroundStyle(.red) }
+            if model.phase == .transcribing { ProgressView().controlSize(.small); Text("받아 적는 중").font(.caption) }
+            Spacer(minLength: 8)
+            skillChip
+            sendButton
         }
-        .onAppear { focused = true }
-        .onChange(of: model.phase) { _, p in if p == .compose { focused = true } }
     }
 
-    func routeTo(_ intent: RequestIntent) {
-        if intent != .skill && !model.session.canProceed { return }
-        model.decision = nil
-        model.switchIntent(intent)
+    var projectChip: some View {
+        Chip(icon: "at", label: projectLabel, badge: projectBadge, badgeColor: projectBadgeColor,
+             active: model.selectedProjectID != nil || model.newProjectMode,
+             onTap: { model.openList(.project) },
+             onClear: (model.selectedProjectID != nil || model.newProjectMode) ? { model.clearProject() } : nil)
+            .help("보낼 프로젝트 고르기 (입력 중 @)")
+            .accessibilityLabel("프로젝트: \(projectLabel) \(projectBadge ?? "")")
+    }
+
+    var projectLabel: String {
+        if model.newProjectMode { return "새 프로젝트" }
+        return model.selectedProject?.alias ?? "프로젝트"
+    }
+
+    var projectBadge: String? {
+        if let soft = model.softSelection, model.selectedProjectID != nil || model.newProjectMode { return soft }
+        guard let p = model.selectedProject else { return nil }
+        if model.currentTarget != nil { return "연결됨" }
+        return model.connection[p.id]?.label ?? "미확인"
+    }
+
+    var projectBadgeColor: Color {
+        if model.softSelection != nil { return .blue }
+        if model.newProjectMode || model.currentTarget != nil { return .green }
+        return .orange
+    }
+
+    var skillChip: some View {
+        Chip(icon: "slash.circle", label: model.selectedSkill?.invocation ?? "스킬",
+             badge: model.selectedSkill?.availability == .inferred ? "추정" : nil, badgeColor: .orange,
+             active: model.selectedSkill != nil,
+             onTap: { model.openList(.skill) },
+             onClear: model.selectedSkill != nil ? { model.clearSkill() } : nil)
+            .help("스킬 고르기 (입력 중 /)")
+            .accessibilityLabel("스킬: \(model.selectedSkill?.invocation ?? "없음")")
+    }
+
+    var sendButton: some View {
+        Button { model.submit() } label: {
+            HStack(spacing: 4) {
+                if model.phase == .sending { ProgressView().controlSize(.small) } else { Image(systemName: "arrow.up") }
+                Text(model.newProjectMode ? "다음" : "보내기")
+                Text("⌘↵").font(.caption2).opacity(0.7)
+            }
+        }
+        .buttonStyle(.borderedProminent)
+        .disabled(!model.canSubmit)
+        .accessibilityLabel(model.newProjectMode ? "새 프로젝트 다음 단계" : "보내기")
     }
 }
 
-// MARK: - 기존 프로젝트 확인
-
-struct ExistingReviewView: View {
-    @ObservedObject var model: AppModel
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            ReviewHeader(model: model, title: "보낼 대상 확인")
-            TargetPicker(model: model)
-            Text("전달할 내용 (편집 가능)").font(.caption).foregroundStyle(.secondary)
-            TextEditor(text: $model.reviewText)
-                .font(.system(size: 14))
-                .scrollContentBackground(.hidden)
-                .padding(6)
-                .background(RoundedRectangle(cornerRadius: 8).fill(Color(nsColor: .textBackgroundColor).opacity(0.55)))
-                .frame(minHeight: 120)
-                .accessibilityIdentifier("reviewText")
-            OutcomeLine(outcome: model.outcome)
-            HStack {
-                Button("뒤로") { model.backToCompose() }
-                Spacer()
-                if model.phase == .sending { ProgressView().controlSize(.small); Text("재확인 후 전송 중…").font(.caption) }
-                Button("전송") { model.sendExisting() }
-                    .keyboardShortcut(.return, modifiers: .command)
-                    .buttonStyle(.borderedProminent)
-                    .disabled(model.currentTarget == nil || model.phase == .sending
-                              || model.reviewText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-            }
-        }
-    }
-}
-
-struct ReviewHeader: View {
-    @ObservedObject var model: AppModel
-    let title: String
-    var body: some View {
-        HStack {
-            Text(title).font(.title3.weight(.semibold))
-            Spacer()
-            Picker("작업 종류", selection: Binding(get: { currentIntent }, set: { model.switchIntent($0) })) {
-                Text("기존 프로젝트").tag(RequestIntent.existingProject)
-                Text("새 프로젝트").tag(RequestIntent.newProject)
-                Text("스킬").tag(RequestIntent.skill)
-            }
-            .pickerStyle(.segmented)
-            .frame(width: 280)
-            .disabled(model.phase == .sending || model.phase == .creating)
-        }
-        if let d = model.decision {
-            Text("추천: \(d.reason)\(d.source == "llm" ? " · 로컬 모델" : d.source == "rule" ? " · 규칙" : "")")
-                .font(.caption).foregroundStyle(.secondary)
-        }
-    }
-    var currentIntent: RequestIntent {
-        switch model.phase {
-        case .reviewNew, .creating: return .newProject
-        case .reviewSkill: return .skill
-        default: return .existingProject
-        }
-    }
-}
-
-/// 프로젝트·경로·호스트·터미널을 함께 보여 준다(PRD 4.3).
-struct TargetPicker: View {
-    @ObservedObject var model: AppModel
+/// ChatGPT 입력창 아래 옵션 같은 둥근 칩
+struct Chip: View {
+    let icon: String
+    let label: String
+    let badge: String?
+    let badgeColor: Color
+    let active: Bool
+    let onTap: () -> Void
+    let onClear: (() -> Void)?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            if model.projects.isEmpty {
-                Text("페어링된 프로젝트가 없습니다. 설정 > 프로젝트에서 Orca 터미널을 연결해 주세요.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            Picker("프로젝트", selection: $model.selectedProjectID) {
-                Text("대상을 고르세요").tag(UUID?.none)
-                ForEach(orderedProjects) { p in
-                    Text("\(p.alias) — \(model.connection[p.id]?.label ?? "미확인")").tag(UUID?.some(p.id))
-                }
-            }
-            .onChange(of: model.selectedProjectID) { _, _ in model.selectedHandle = nil }
-            if let p = model.selectedProject {
-                let state = model.connection[p.id] ?? .unknown(reason: "아직 조회하지 않음")
-                Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 3) {
-                    GridRow { Text("경로").foregroundStyle(.secondary); Text(p.canonicalPath).textSelection(.enabled).lineLimit(1).truncationMode(.middle) }
-                    GridRow { Text("호스트").foregroundStyle(.secondary); Text(p.hostId == "local" ? "이 Mac (local)" : p.hostId) }
-                    GridRow { Text("상태").foregroundStyle(.secondary); Text(stateText(state)) }
-                    if let (_, t) = model.currentTarget {
-                        GridRow { Text("터미널").foregroundStyle(.secondary); Text("Claude Code · \(t.title ?? String(t.handle.prefix(13)) + "…")\(t.orphaned == true ? " · Orca 탭과 분리됨" : "")") }
+        HStack(spacing: 4) {
+            Button(action: onTap) {
+                HStack(spacing: 5) {
+                    Image(systemName: icon).font(.caption)
+                    Text(label).font(.callout).lineLimit(1)
+                    if let b = badge {
+                        Text(b).font(.caption2.weight(.medium)).foregroundStyle(badgeColor)
+                            .padding(.horizontal, 5).padding(.vertical, 1)
+                            .background(Capsule().fill(badgeColor.opacity(0.15)))
                     }
+                    Image(systemName: "chevron.down").font(.caption2).opacity(0.6)
                 }
-                .font(.callout)
-                if case .needsConfirmation(let cands, _) = state {
-                    Picker("터미널 직접 선택", selection: $model.selectedHandle) {
-                        Text("고르세요").tag(String?.none)
-                        ForEach(cands) { t in
-                            Text("\(t.title ?? String(t.handle.prefix(13)) + "…") · 마지막 출력 \(relative(t.lastOutputAt))").tag(String?.some(t.handle))
+            }
+            .buttonStyle(.plain)
+            if let onClear {
+                Button(action: onClear) { Image(systemName: "xmark.circle.fill").font(.caption).opacity(0.5) }
+                    .buttonStyle(.plain).accessibilityLabel("\(label) 해제")
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .background(Capsule().fill(active ? Color.accentColor.opacity(0.14) : Color.secondary.opacity(0.12)))
+        .overlay(Capsule().stroke(active ? Color.accentColor.opacity(0.4) : Color.clear))
+    }
+}
+
+// MARK: - 칩 위로 펼치는 목록 (@ / 공용)
+
+struct ChipListView: View {
+    @ObservedObject var model: AppModel
+
+    var body: some View {
+        let items = model.listItems
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                Text(model.listKind == .project ? "보낼 프로젝트" : "스킬 (파일·Orca 목록 기준, 전체 목록 아님)")
+                    .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
+                if !model.listQuery.isEmpty { Text("“\(model.listQuery)”").font(.caption).foregroundStyle(.secondary) }
+                Spacer()
+                Text("↑↓ 이동 · ↵ 선택 · esc 닫기").font(.caption2).foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 10).padding(.vertical, 6)
+            if items.isEmpty {
+                Text(model.listKind == .project ? "맞는 프로젝트가 없습니다. 설정 > 프로젝트에서 Orca를 다시 조회해 보세요" : "맞는 스킬이 없습니다")
+                    .font(.callout).foregroundStyle(.secondary).padding(10)
+            }
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 2) {
+                        ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
+                            row(item, highlighted: i == model.highlight)
+                                .id(i)
+                                .onTapGesture { model.choose(item) }
+                                .onHover { if $0 { model.highlight = i } }
                         }
                     }
+                    .padding(.horizontal, 4).padding(.bottom, 4)
                 }
+                .frame(maxHeight: min(CGFloat(items.count), 6) * 40)
+                .onChange(of: model.highlight) { _, h in proxy.scrollTo(h) }
             }
         }
+        .background(RoundedRectangle(cornerRadius: 10).fill(Color(nsColor: .windowBackgroundColor).opacity(0.85)))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.2)))
     }
 
-    var orderedProjects: [ProjectRecord] {
-        let ranked = model.decision?.ranked ?? []
-        return model.projects.sorted { a, b in
-            (ranked.firstIndex(of: a.id) ?? .max, a.alias) < (ranked.firstIndex(of: b.id) ?? .max, b.alias)
+    func row(_ item: AppModel.ListItem, highlighted: Bool) -> some View {
+        HStack(alignment: .center, spacing: 8) {
+            VStack(alignment: .leading, spacing: 1) {
+                Text(item.title).font(model.listKind == .skill ? .system(.callout, design: .monospaced) : .callout.weight(.medium))
+                Text(item.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
+            }
+            Spacer()
+            if !item.badge.isEmpty {
+                Text(item.badge).font(.caption2).foregroundStyle(item.enabled ? Color.secondary : Color.red)
+            }
         }
-    }
-
-    func stateText(_ s: ConnectionState) -> String {
-        switch s {
-        case .connected: return "연결 확인됨"
-        case .needsConfirmation(_, let r): return "확인 필요 — \(r)"
-        case .offline(let r): return "오프라인 — \(r)"
-        case .unknown(let r): return "미확인 — \(r)"
-        }
-    }
-
-    func relative(_ ms: Double?) -> String {
-        guard let ms else { return "알 수 없음" }
-        let f = RelativeDateTimeFormatter()
-        f.locale = Locale(identifier: "ko_KR")
-        return f.localizedString(for: Date(timeIntervalSince1970: ms / 1000), relativeTo: Date())
+        .padding(.horizontal, 8).padding(.vertical, 4)
+        .frame(height: 38)
+        .background(RoundedRectangle(cornerRadius: 7).fill(highlighted ? Color.accentColor.opacity(0.2) : Color.clear))
+        .opacity(item.enabled ? 1 : 0.45)
+        .contentShape(Rectangle())
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
     }
 }
 
-struct OutcomeLine: View {
-    let outcome: DeliveryOutcome?
-    var body: some View {
-        if let o = outcome {
-            switch o {
-            case .blocked(let g): Label("전송하지 않았습니다: \(g.localizedDescription)", systemImage: "hand.raised.fill").foregroundStyle(.orange).font(.callout)
-            case .failed(let m): Label("실패: \(m)", systemImage: "xmark.octagon.fill").foregroundStyle(.red).font(.callout)
-            case .rejectedDuplicate: Label("이미 전송 중입니다", systemImage: "clock").font(.callout)
-            case .delivered: Label("터미널에 전달됨", systemImage: "checkmark.circle.fill").foregroundStyle(.green).font(.callout)
-            case .unknown(_, let r): Label("전송 여부 불명: \(r)", systemImage: "questionmark.circle.fill").foregroundStyle(.orange).font(.callout)
-            }
-        }
-    }
-}
+// MARK: - 결과 한 줄
 
-// MARK: - 결과
-
-struct ResultView: View {
+struct StatusLineView: View {
     @ObservedObject var model: AppModel
+    let line: AppModel.StatusLine
+
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            OutcomeLine(outcome: model.outcome).font(.title3)
-            if case .delivered = model.outcome {
-                Text("Claude Code가 입력을 받아 처리를 시작했습니다. 작업 완료 여부는 Orca에서 확인해 주세요.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            if case .unknown = model.outcome {
-                Text("자동으로 다시 보내지 않습니다. Orca 화면을 확인한 뒤, 정말 도착하지 않았을 때만 같은 요청으로 재시도하세요.")
-                    .font(.callout).foregroundStyle(.secondary)
-            }
-            HStack {
-                Button("Orca에서 열기") { model.openInOrca() }
-                if case .unknown(let rid, _) = model.outcome, rid != nil {
-                    Button("같은 요청으로 재시도") { model.manualRetry() }
-                }
-                Spacer()
-                Button("새 요청") { model.reset(clear: model.prefs.clearInputAfterSend) }
-                    .keyboardShortcut(.return, modifiers: .command)
-                    .buttonStyle(.borderedProminent)
-            }
+        HStack(spacing: 6) {
+            Image(systemName: icon).foregroundStyle(color)
+            Text(line.text).font(.callout).foregroundStyle(line.kind == .ok ? Color.primary : color)
+                .lineLimit(2).fixedSize(horizontal: false, vertical: true)
+            Spacer()
+            if line.confirmInferredSkill { Button("확인했음, 보내기") { model.confirmInferredAndSend() } }
+            if line.canOpenOrca { Button("Orca에서 열기") { model.openInOrca() } }
+            if line.canRetry { Button("같은 요청으로 재시도") { model.manualRetry() } }
+        }
+        .controlSize(.small)
+        .accessibilityElement(children: .contain)
+    }
+
+    var icon: String {
+        switch line.kind {
+        case .ok: return "checkmark.circle.fill"
+        case .info: return "info.circle"
+        case .warn: return "exclamationmark.triangle.fill"
+        case .error: return "xmark.octagon.fill"
+        }
+    }
+
+    var color: Color {
+        switch line.kind {
+        case .ok: return .green
+        case .info: return .blue
+        case .warn: return .orange
+        case .error: return .red
         }
     }
 }

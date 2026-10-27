@@ -3,30 +3,69 @@ import AVFoundation
 import Combine
 import JARVISCore
 
-/// 패널 상태 머신(PRD 4.7). UI는 이 모델만 보고, CLI는 JARVISCore 어댑터를 통해서만 부른다.
+/// 한 화면 컴포저 상태(ChatGPT 입력창 방식). 입력창 아래 칩으로 프로젝트(@)·스킬(/)을 고른다.
+/// UI는 이 모델만 보고, CLI는 JARVISCore 어댑터를 통해서만 부른다.
 @MainActor
 final class AppModel: ObservableObject {
-    enum Phase: Equatable {
-        case compose
-        case recording
-        case transcribing
-        case classifying
-        case reviewExisting
-        case reviewNew
-        case creating
-        case reviewSkill
-        case sending
-        case result
-    }
-
+    enum Phase: Equatable { case compose, recording, transcribing, sending, creating }
     enum MenuStatus { case ready, attention, offline }
 
-    // MARK: 상태
-    @Published var phase: Phase = .compose { didSet { onPanelHeightChange?(panelHeight) } }
-    @Published var session = ComposerSession()
-    @Published var notice: String?          // 패널 하단 안내(오류 포함)
-    @Published var cursorUTF16: Int?
+    struct StatusLine: Equatable {
+        enum Kind { case ok, info, warn, error }
+        var text: String
+        var kind: Kind
+        var canRetry = false
+        var canOpenOrca = false
+        var confirmInferredSkill = false
+    }
 
+    /// 칩 위로 펼치는 목록의 한 줄
+    struct ListItem: Identifiable, Equatable {
+        enum Action: Equatable {
+            case project(UUID, handle: String?)
+            case pairTerminal(TerminalCandidate)
+            case newProject
+            case skill(String)
+        }
+        let id: String
+        let title: String
+        let subtitle: String
+        let badge: String
+        let enabled: Bool
+        let action: Action
+    }
+
+    // MARK: 입력
+    @Published var phase: Phase = .compose
+    @Published var session = ComposerSession()
+    @Published var caretUTF16: Int?
+    /// 모델이 텍스트를 바꾼 뒤 입력창에 적용할 커서 위치
+    @Published var pendingCaret: Int?
+    @Published var focusTick = 0
+
+    // MARK: 칩
+    @Published var selectedProjectID: UUID?
+    /// 같은 폴더에 Claude가 여러 개일 때 고른 터미널
+    @Published var selectedHandle: String?
+    /// 칩을 앱이 채운 경우의 이유("추천", "지난 대상"). nil이면 작가님이 직접 고른 것.
+    @Published var softSelection: String?
+    @Published var newProjectMode = false
+    @Published var selectedSkillID: String?
+    @Published var skills: [SkillEntry] = []
+
+    // MARK: 칩 위 목록
+    @Published var listKind: TriggerKind?
+    @Published var listQuery = ""
+    @Published var highlight = 0
+    /// 입력 중 트리거로 연 경우의 토큰(선택하면 지운다)
+    var activeTrigger: ActiveTrigger?
+
+    // MARK: 결과 한 줄
+    @Published var status: StatusLine?
+    var lastDelivery: (target: TargetSnapshot, text: String, requestId: String?)?
+    var inferredConfirmed = false
+
+    // MARK: 연결
     @Published var prefs: Preferences
     @Published var projects: [ProjectRecord]
     @Published var connection: [UUID: ConnectionState] = [:]
@@ -37,31 +76,16 @@ final class AppModel: ObservableObject {
     @Published var statusLabel = "준비"
     @Published var hotkeyProblem: String?
 
-    // 기존 프로젝트 확인 단계
-    @Published var decision: RouteDecision?
-    @Published var selectedProjectID: UUID?
-    /// 같은 폴더에 Claude가 여러 개일 때 사용자가 직접 고른 터미널
-    @Published var selectedHandle: String?
-    @Published var reviewText = ""
-    @Published var outcome: DeliveryOutcome?
-    @Published var lastDelivery: (target: TargetSnapshot, text: String, requestId: String?)?
-
-    // 새 프로젝트
+    // MARK: 새 프로젝트 카드
     @Published var meta: MetaPrompt?
+    @Published var composingMeta = false
     @Published var newName = ""
     @Published var metaText = ""
     @Published var creation: CreationCheckpoint?
     @Published var creationMessage: String?
     @Published var creationCanResume = false
+    @Published var creationDelivered = false
 
-    // 스킬
-    @Published var skills: [SkillEntry] = []
-    @Published var skillFilter = ""
-    @Published var selectedSkillID: String?
-    @Published var skillArgs = ""
-
-    // 패널 콜백
-    var onPanelHeightChange: ((CGFloat) -> Void)?
     var onRequestHide: (() -> Void)?
     var onOpenSettings: (() -> Void)?
     var onHotkeyChanged: ((HotkeySetting) -> Void)?
@@ -70,6 +94,8 @@ final class AppModel: ObservableObject {
     private var recorder: MicRecorder?
     private var llmEngine: LlamaServerLLM?
     private var dispatcher: DispatchCoordinator?
+    private var suggestTask: Task<Void, Never>?
+    private var statusClearTask: Task<Void, Never>?
 
     init(stores: AppStores = AppStores()) {
         self.stores = stores
@@ -81,13 +107,17 @@ final class AppModel: ObservableObject {
         }
     }
 
+    // MARK: 높이 (PanelController가 관찰)
+
+    var showNewProjectCard: Bool { newProjectMode && (meta != nil || composingMeta || creation != nil) }
+
     var panelHeight: CGFloat {
-        switch phase {
-        case .compose, .recording, .transcribing, .classifying: return 300
-        case .result: return 280
-        case .reviewNew, .creating: return 640
-        case .reviewExisting, .reviewSkill, .sending: return 560
-        }
+        var h: CGFloat = 214
+        if targetSummary != nil { h += 20 }
+        if let s = status { h += s.canRetry || s.confirmInferredSkill ? 34 : 24 }
+        if listKind != nil { h += min(CGFloat(max(listItems.count, 1)), 6) * 40 + 30 }
+        if showNewProjectCard { h += 360 }
+        return h
     }
 
     // MARK: 의존 객체
@@ -105,10 +135,10 @@ final class AppModel: ObservableObject {
     }
 
     var llm: LocalLLM? {
-        guard prefs.useLLM, FileManager.default.isExecutableFile(atPath: (prefs.llamaServerPath as NSString).expandingTildeInPath),
-              FileManager.default.fileExists(atPath: (prefs.llmModelPath as NSString).expandingTildeInPath) else { return nil }
-        if let e = llmEngine, e.serverPath == (prefs.llamaServerPath as NSString).expandingTildeInPath,
-           e.modelPath == (prefs.llmModelPath as NSString).expandingTildeInPath { return e }
+        let server = (prefs.llamaServerPath as NSString).expandingTildeInPath
+        let model = (prefs.llmModelPath as NSString).expandingTildeInPath
+        guard prefs.useLLM, FileManager.default.isExecutableFile(atPath: server), FileManager.default.fileExists(atPath: model) else { return nil }
+        if let e = llmEngine, e.serverPath == server, e.modelPath == model { return e }
         llmEngine = LlamaServerLLM(serverPath: prefs.llamaServerPath, modelPath: prefs.llmModelPath)
         return llmEngine
     }
@@ -127,34 +157,385 @@ final class AppModel: ObservableObject {
     // MARK: 패널
 
     func panelDidShow() {
-        notice = nil
-        Task { await refreshOrca() }
+        if selectedProjectID == nil, !newProjectMode, let last = prefs.lastProjectID, projects.contains(where: { $0.id == last }) {
+            selectedProjectID = last
+            softSelection = "지난 대상"
+        }
+        focusTick += 1
+        Task {
+            await refreshOrca()
+            if skills.isEmpty { await loadSkills() }
+        }
     }
 
     func panelDidHide() {
         if phase == .recording { cancelRecording() }
+        closeList()
     }
 
+    /// Esc: 목록 → 새 프로젝트 카드(진행 전이면) → 패널 순으로 닫는다. 입력은 남긴다.
     func escape() {
-        if phase == .recording { cancelRecording() }
+        if listKind != nil { closeList(); return }
+        if phase == .recording { cancelRecording(); return }
+        if showNewProjectCard && phase != .creating && creation?.folderPath == nil {
+            meta = nil
+            return
+        }
         onRequestHide?()
     }
 
-    /// 원문은 남기고 처음 단계로(뒤로 가기)
-    func backToCompose() {
-        session.back()
-        phase = .compose
-        notice = nil
-        outcome = nil
+    // MARK: 입력 변화·트리거
+
+    func textChanged(_ text: String, caret: Int) {
+        session.original = text
+        caretUTF16 = caret
+        if let t = TriggerParser.active(in: text, caretUTF16: caret) {
+            activeTrigger = t
+            if listKind != t.kind { highlight = 0 }
+            listKind = t.kind
+            listQuery = t.query
+            if t.kind == .skill && skills.isEmpty { Task { await loadSkills() } }
+            highlight = min(highlight, max(listItems.count - 1, 0))
+        } else if activeTrigger != nil {
+            activeTrigger = nil
+            closeList()
+        }
+        if status?.kind == .ok { status = nil }
+        scheduleSuggestion()
     }
 
-    /// 완료 후 새 요청
-    func reset(clear: Bool) {
-        if clear { session = ComposerSession() }
-        decision = nil; selectedProjectID = nil; selectedHandle = nil; reviewText = ""
-        outcome = nil; meta = nil; metaText = ""; newName = ""; selectedSkillID = nil; skillArgs = ""
-        notice = nil
-        phase = .compose
+    func caretMoved(_ caret: Int) {
+        caretUTF16 = caret
+        if activeTrigger != nil, TriggerParser.active(in: session.original, caretUTF16: caret) == nil {
+            activeTrigger = nil
+            closeList()
+        }
+    }
+
+    func openList(_ kind: TriggerKind) {
+        if listKind == kind && activeTrigger == nil { closeList(); return }
+        activeTrigger = nil
+        listKind = kind
+        listQuery = ""
+        highlight = 0
+        if kind == .skill && skills.isEmpty { Task { await loadSkills() } }
+        if kind == .project { Task { await refreshOrca() } }
+        focusTick += 1
+    }
+
+    func closeList() {
+        listKind = nil
+        listQuery = ""
+        highlight = 0
+    }
+
+    func moveHighlight(_ delta: Int) {
+        let n = listItems.count
+        guard n > 0 else { return }
+        highlight = (highlight + delta + n) % n
+    }
+
+    func chooseHighlighted() {
+        let items = listItems
+        guard items.indices.contains(highlight) else { return }
+        choose(items[highlight])
+    }
+
+    func choose(_ item: ListItem) {
+        guard item.enabled else { return }
+        if let t = activeTrigger {
+            let (text, caret) = TriggerParser.removing(t, from: session.original)
+            session.original = text
+            pendingCaret = caret
+            activeTrigger = nil
+        }
+        switch item.action {
+        case .project(let id, let handle):
+            selectProject(id, handle: handle)
+        case .pairTerminal(let t):
+            if let id = pair(t) { selectProject(id, handle: nil) }
+        case .newProject:
+            newProjectMode = true
+            selectedProjectID = nil
+            selectedHandle = nil
+            softSelection = nil
+            meta = nil
+        case .skill(let id):
+            selectedSkillID = id
+            inferredConfirmed = false
+            if let s = selectedSkill, s.availability == .inferred {
+                setStatus("'\(s.invocation)'는 Orca 목록에만 있는 스킬입니다. 보낼 때 한 번 더 확인합니다", .info)
+            }
+        }
+        closeList()
+        focusTick += 1
+    }
+
+    func selectProject(_ id: UUID, handle: String?) {
+        selectedProjectID = id
+        selectedHandle = handle
+        softSelection = nil
+        newProjectMode = false
+        meta = nil
+        Task { await loadSkills() }
+    }
+
+    func clearProject() {
+        selectedProjectID = nil
+        selectedHandle = nil
+        softSelection = nil
+        newProjectMode = false
+        meta = nil
+    }
+
+    func clearSkill() { selectedSkillID = nil; inferredConfirmed = false }
+
+    /// 칩이 비어 있거나 앱이 채운 칩이면, 입력이 멈춘 뒤 규칙으로 대상을 추천한다(작가님이 고른 칩은 바꾸지 않음).
+    private func scheduleSuggestion() {
+        suggestTask?.cancel()
+        guard (selectedProjectID == nil && !newProjectMode) || softSelection != nil else { return }
+        let text = session.original
+        let cands = projects.map(RouteCandidate.init)
+        suggestTask = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            guard !Task.isCancelled, let self else { return }
+            guard let d = IntentRouter.ruleRoute(text: text, candidates: cands) else { return }
+            switch d.intent {
+            case .existingProject:
+                if let id = d.suggested, self.connection[id]?.terminal != nil, id != self.selectedProjectID {
+                    self.selectedProjectID = id
+                    self.selectedHandle = nil
+                    self.newProjectMode = false
+                    self.softSelection = "추천"
+                }
+            case .newProject:
+                if !self.newProjectMode {
+                    self.newProjectMode = true
+                    self.selectedProjectID = nil
+                    self.softSelection = "추천"
+                }
+            default: break
+            }
+        }
+    }
+
+    // MARK: 칩 위 목록 항목
+
+    var listItems: [ListItem] {
+        let q = listQuery.lowercased()
+        func match(_ parts: String...) -> Bool { q.isEmpty || parts.contains { $0.lowercased().contains(q) } }
+        switch listKind {
+        case .project:
+            var items: [ListItem] = []
+            for p in projects.sorted(by: { $0.alias < $1.alias }) {
+                let state = connection[p.id] ?? .unknown(reason: "조회 전")
+                if case .needsConfirmation(let cands, _) = state {
+                    for t in cands where match(p.alias, p.folderName, t.title ?? "") {
+                        items.append(ListItem(id: "p-\(p.id)-\(t.handle)", title: p.alias,
+                                              subtitle: "\(t.title ?? String(t.handle.prefix(13))) · 같은 폴더에 세션 여러 개 — 이 터미널",
+                                              badge: "직접 선택", enabled: true, action: .project(p.id, handle: t.handle)))
+                    }
+                    continue
+                }
+                guard match(p.alias, p.folderName, state.terminal?.title ?? "", p.note) else { continue }
+                items.append(ListItem(id: "p-\(p.id)", title: p.alias,
+                                      subtitle: [state.terminal?.title, shortPath(p.canonicalPath)].compactMap { $0 }.joined(separator: " · "),
+                                      badge: state.label, enabled: true, action: .project(p.id, handle: nil)))
+            }
+            let paired = Set(projects.map { "\($0.hostId)|\($0.canonicalPath)" })
+            if let list = lastList {
+                for row in SessionRegistry.pairableCandidates(list) where row.pairable {
+                    let t = row.terminal
+                    guard let path = t.worktreePath, !paired.contains("\(t.executionHostId ?? "")|\(PathTools.canonical(path))"),
+                          match(t.folderName, t.title ?? "") else { continue }
+                    items.append(ListItem(id: "t-\(t.handle)", title: t.folderName,
+                                          subtitle: "\(t.title ?? "Orca 터미널") · \(shortPath(path))",
+                                          badge: t.orphaned == true ? "연결하기 · 탭 분리" : "연결하기", enabled: true, action: .pairTerminal(t)))
+                }
+            }
+            if match("새 프로젝트", "new") {
+                items.append(ListItem(id: "new", title: "＋ 새 프로젝트", subtitle: "폴더를 만들고 Claude를 플랜 모드로 시작",
+                                      badge: "", enabled: true, action: .newProject))
+            }
+            return items
+        case .skill:
+            return skills.filter { match($0.name, $0.description) }.prefix(60).map { s in
+                ListItem(id: "s-\(s.id)", title: s.invocation, subtitle: s.description.isEmpty ? s.note : s.description,
+                         badge: "\(s.source.rawValue) · \(s.availability.rawValue)", enabled: s.callable, action: .skill(s.id))
+            }
+        case nil:
+            return []
+        }
+    }
+
+    func shortPath(_ p: String) -> String {
+        let home = NSHomeDirectory()
+        let t = p.hasPrefix(home) ? "~" + p.dropFirst(home.count) : p
+        let comps = t.split(separator: "/")
+        return comps.count > 3 ? "…/" + comps.suffix(2).joined(separator: "/") : t
+    }
+
+    // MARK: 선택된 대상
+
+    var selectedProject: ProjectRecord? { projects.first { $0.id == selectedProjectID } }
+    var selectedSkill: SkillEntry? { skills.first { $0.id == selectedSkillID } }
+
+    /// 확인용 대상(이것과 전송 직전 재조회 결과를 대조한다)
+    var currentTarget: (TargetSnapshot, TerminalCandidate)? {
+        guard let p = selectedProject, let state = connection[p.id] else { return nil }
+        switch state {
+        case .connected(let t): return (TargetSnapshot(project: p, terminal: t), t)
+        case .needsConfirmation(let cands, _):
+            guard let h = selectedHandle, let t = cands.first(where: { $0.handle == h }) else { return nil }
+            return (TargetSnapshot(project: p, terminal: t), t)
+        default: return nil
+        }
+    }
+
+    /// 입력창 아래 한 줄 요약(경로 · 호스트 · 터미널) — PRD 4.3
+    var targetSummary: String? {
+        if newProjectMode {
+            return prefs.defaultParentFolder.isEmpty ? "새 프로젝트 · 설정에서 기본 상위 폴더를 먼저 지정해 주세요"
+                : "새 프로젝트 · \(shortPath(prefs.defaultParentFolder))/… · 새 Orca 터미널 · Claude 플랜 모드"
+        }
+        guard let p = selectedProject else { return nil }
+        let host = p.hostId == "local" ? "이 Mac" : p.hostId
+        if let (_, t) = currentTarget {
+            return "\(shortPath(p.canonicalPath)) · \(host) · Claude \"\(t.title ?? String(t.handle.prefix(13)))\"\(t.orphaned == true ? " · 탭 분리" : "")"
+        }
+        let state = connection[p.id] ?? .unknown(reason: "조회 전")
+        switch state {
+        case .needsConfirmation(_, let r): return "\(shortPath(p.canonicalPath)) · \(r) — @에서 터미널을 골라 주세요"
+        case .offline(let r), .unknown(let r): return "\(shortPath(p.canonicalPath)) · \(state.label): \(r)"
+        case .connected: return nil
+        }
+    }
+
+    var canSubmit: Bool {
+        guard phase == .compose else { return false }
+        if newProjectMode { return session.canProceed && !showNewProjectCard }
+        return session.canProceed || selectedSkillID != nil
+    }
+
+    // MARK: 전송 (⌘↵)
+
+    func submit() {
+        guard canSubmit else { return }
+        closeList()
+        if newProjectMode {
+            Task { await composeNewProject() }
+            return
+        }
+        guard selectedProjectID != nil else {
+            recommendThenWait()
+            return
+        }
+        guard let (target, _) = currentTarget else {
+            setStatus(targetSummary ?? "보낼 수 있는 대상이 아닙니다", .warn)
+            openList(.project)
+            return
+        }
+        if let s = selectedSkill, s.availability == .inferred, !inferredConfirmed {
+            var line = StatusLine(text: "'\(s.invocation)'가 이 세션에서 쓸 수 있는지 확인되지 않았습니다(/skills로 확인 후 진행)", kind: .warn)
+            line.confirmInferredSkill = true
+            status = line
+            return
+        }
+        send(text: ComposerSession.outgoing(text: session.original, skillInvocation: selectedSkill?.invocation), to: target)
+    }
+
+    func confirmInferredAndSend() {
+        inferredConfirmed = true
+        status = nil
+        submit()
+    }
+
+    /// 칩이 비었을 때: 추천만 하고 보내지 않는다. 한 번 더 ⌘↵를 눌러야 전송된다.
+    private func recommendThenWait() {
+        phase = .sending
+        statusLabel = "대상 추천 중"
+        let text = session.original
+        let cands = projects.map(RouteCandidate.init)
+        let engine = llm
+        Task {
+            await refreshOrca()
+            let d = await IntentRouter.route(text: text, candidates: cands, llm: engine)
+            phase = .compose
+            updateMenuStatus()
+            Diagnostics.log("route intent=\(d.intent.rawValue) source=\(d.source) needsSelection=\(d.needsUserSelection)")
+            if d.intent == .newProject {
+                newProjectMode = true
+                softSelection = "추천"
+                setStatus("새 프로젝트로 보입니다. 맞으면 ⌘↵로 계속하세요", .info)
+            } else if d.intent == .existingProject, let id = d.suggested, connection[id]?.terminal != nil {
+                selectedProjectID = id
+                softSelection = "추천"
+                setStatus("추천: \(selectedProject?.alias ?? "") — \(d.reason). 맞으면 ⌘↵로 보냅니다", .info)
+            } else {
+                setStatus("보낼 프로젝트를 골라 주세요 (\(d.reason))", .info)
+                openList(.project)
+            }
+            focusTick += 1
+        }
+    }
+
+    private func send(text: String, to target: TargetSnapshot, retryRequestId: String? = nil) {
+        guard let d = dispatchCoordinator() else { setStatus("Orca CLI를 찾지 못했습니다", .error); return }
+        phase = .sending
+        statusLabel = "전송 중"
+        Task {
+            let out = await d.dispatch(text: text, to: target, retryRequestId: retryRequestId)
+            phase = .compose
+            Diagnostics.log("dispatch outcome=\(out.label) chars=\(text.count)")
+            switch out {
+            case .delivered(let rid):
+                lastDelivery = (target, text, rid)
+                prefs.lastProjectID = target.projectID
+                savePrefs()
+                let name = projects.first { $0.id == target.projectID }?.alias ?? ""
+                if prefs.clearInputAfterSend { session = ComposerSession(); pendingCaret = 0 }
+                selectedSkillID = nil
+                softSelection = nil
+                setStatus("\(name)에 전달됨 · \(Date().formatted(date: .omitted, time: .shortened))", .ok, autoClear: 6)
+                statusLabel = "전송 확인"
+            case .unknown(let rid, let reason):
+                lastDelivery = (target, text, rid)
+                var line = StatusLine(text: "전송 여부 불명: \(reason) — 자동으로 다시 보내지 않습니다", kind: .warn)
+                line.canRetry = rid != nil
+                line.canOpenOrca = true
+                status = line
+                statusLabel = "재확인 필요"
+            case .blocked(let g):
+                setStatus("보내지 않았습니다: \(g.localizedDescription)", .warn)
+                await refreshOrca()
+            case .failed(let m):
+                setStatus("실패: \(m)", .error)
+            case .rejectedDuplicate:
+                setStatus("이미 전송 중입니다", .info)
+            }
+            focusTick += 1
+        }
+    }
+
+    /// 상태 불명 뒤 사용자가 화면을 확인하고 누르는 수동 재시도. 같은 requestId로만 재개한다.
+    func manualRetry() {
+        guard let last = lastDelivery, let rid = last.requestId else { return }
+        status = nil
+        send(text: last.text, to: last.target, retryRequestId: rid)
+    }
+
+    func openInOrca() { NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Orca.app")) }
+
+    func setStatus(_ text: String, _ kind: StatusLine.Kind, autoClear: Double? = nil) {
+        let line = StatusLine(text: text, kind: kind)
+        status = line
+        statusClearTask?.cancel()
+        if let secs = autoClear {
+            statusClearTask = Task { [weak self] in
+                try? await Task.sleep(nanoseconds: UInt64(secs * 1_000_000_000))
+                if !Task.isCancelled, self?.status == line { self?.status = nil }
+            }
+        }
     }
 
     // MARK: Orca 조회·재연결 (FR-04·05)
@@ -195,29 +576,43 @@ final class AppModel: ObservableObject {
 
     func updateMenuStatus() {
         if orcaProblem != nil { menuStatus = .offline; statusLabel = "연결 끊김"; return }
-        let states = Array(connection.values)
-        if states.contains(where: { if case .needsConfirmation = $0 { return true }; return false }) {
+        if connection.values.contains(where: { if case .needsConfirmation = $0 { return true }; return false }) {
             menuStatus = .attention; statusLabel = "재확인 필요"
         } else {
             menuStatus = .ready; statusLabel = "준비"
         }
     }
 
-    /// 설정에서 터미널을 프로젝트로 페어링한다. 핸들이 아니라 경로·호스트·worktree를 저장한다.
-    func pair(_ t: TerminalCandidate) {
-        guard let path = t.worktreePath, let host = t.executionHostId else { return }
+    /// 터미널을 프로젝트로 페어링한다. 핸들이 아니라 경로·호스트·worktree를 저장한다.
+    @discardableResult
+    func pair(_ t: TerminalCandidate) -> UUID? {
+        guard let path = t.worktreePath, let host = t.executionHostId else { return nil }
         let canonical = PathTools.canonical(path)
-        if projects.contains(where: { $0.canonicalPath == canonical && $0.hostId == host }) { return }
-        projects.append(ProjectRecord(alias: (canonical as NSString).lastPathComponent, canonicalPath: canonical,
-                                      worktreeId: t.worktreeId, hostId: host, lastRuntimeHandle: t.handle, lastSeenAt: Date()))
+        if let existing = projects.first(where: { $0.canonicalPath == canonical && $0.hostId == host }) { return existing.id }
+        let p = ProjectRecord(alias: (canonical as NSString).lastPathComponent, canonicalPath: canonical,
+                              worktreeId: t.worktreeId, hostId: host, lastRuntimeHandle: t.handle, lastSeenAt: Date())
+        projects.append(p)
         saveProjects()
+        if let list = lastList { connection[p.id] = SessionRegistry.resolve(project: p, list: list) }
+        Diagnostics.log("pair added")
         Task { await refreshOrca() }
+        return p.id
     }
 
     func unpair(_ id: UUID) {
         projects.removeAll { $0.id == id }
         connection[id] = nil
+        if selectedProjectID == id { clearProject() }
+        if prefs.lastProjectID == id { prefs.lastProjectID = nil; savePrefs() }
         saveProjects()
+    }
+
+    // MARK: 스킬 (FR-10)
+
+    func loadSkills() async {
+        let orcaSkills = (try? await orca?.installedSkills()) ?? []
+        skills = SkillCatalog.discover(roots: .init(), projectPath: selectedProject?.canonicalPath, orcaSkills: orcaSkills)
+        if let id = selectedSkillID, !skills.contains(where: { $0.id == id }) { selectedSkillID = nil }
     }
 
     // MARK: 받아쓰기 (FR-03)
@@ -227,26 +622,26 @@ final class AppModel: ObservableObject {
     }
 
     func startRecording() {
-        if let e = recognizer.check() { notice = e.localizedDescription + " — 텍스트로 입력할 수 있습니다"; return }
+        guard phase == .compose else { return }
+        if let e = recognizer.check() { setStatus(e.localizedDescription + " — 텍스트로 입력할 수 있습니다", .warn); return }
         Task {
             let before = MicRecorder.permissionLabel
             let granted = await MicRecorder.requestPermission()
             Diagnostics.log("mic.permission before=\(before) granted=\(granted)")
             guard granted else {
-                notice = "마이크 권한이 없어 받아쓰기를 할 수 없습니다. 시스템 설정 > 개인정보 보호 > 마이크에서 허용할 수 있고, 텍스트 입력은 그대로 쓸 수 있습니다"
+                setStatus("마이크 권한이 없어 받아쓰기를 할 수 없습니다. 시스템 설정 > 개인정보 보호 > 마이크에서 허용할 수 있고, 텍스트 입력은 그대로 쓸 수 있습니다", .warn)
                 return
             }
             do {
-                let dir = stores.directory.appendingPathComponent("tmp-audio", isDirectory: true)
-                let r = try MicRecorder(directory: dir)
+                let r = try MicRecorder(directory: stores.directory.appendingPathComponent("tmp-audio", isDirectory: true))
                 try r.start()
                 recorder = r
                 phase = .recording
                 statusLabel = "녹음 중"
+                status = nil
                 Diagnostics.log("mic.recording started")
-                notice = nil
             } catch {
-                notice = "녹음을 시작하지 못했습니다: \(error.localizedDescription)"
+                setStatus("녹음을 시작하지 못했습니다: \(error.localizedDescription)", .error)
             }
         }
     }
@@ -266,138 +661,46 @@ final class AppModel: ObservableObject {
         statusLabel = "음성 변환 중"
         let rec = recognizer
         let started = Date()
+        let caret = caretUTF16
         Task {
             defer { try? FileManager.default.removeItem(at: wav) }  // 음성 파일은 즉시 삭제(PRD 5.3)
             do {
                 let text = try await rec.transcribe(wav: wav)
-                session.insertTranscript(text, atUTF16: cursorUTF16)
-                notice = nil
+                let before = (session.original as NSString).length
+                session.insertTranscript(text, atUTF16: caret)
+                // 넣은 글자 뒤로 커서를 옮긴다(B15: 예전에는 커서 위치를 받지 못해 항상 끝에 붙였다)
+                let after = (session.original as NSString).length
+                pendingCaret = min((caret ?? before) + (after - before), after)
+                scheduleSuggestion()
                 Diagnostics.log(String(format: "stt.done seconds=%.2f chars=%d", Date().timeIntervalSince(started), text.count))
             } catch {
-                notice = error.localizedDescription + " — 텍스트로 입력할 수 있습니다"
+                setStatus(error.localizedDescription + " — 텍스트로 입력할 수 있습니다", .warn)
                 Diagnostics.log("stt.failed \(error.localizedDescription)")
             }
-            if phase == .transcribing { phase = .compose }
+            phase = .compose
             updateMenuStatus()
+            focusTick += 1
         }
     }
 
-    // MARK: 분류 (FR-06)
+    // MARK: 새 프로젝트 카드 (FR-07·09)
 
-    func proceed() {
-        guard session.canProceed, phase == .compose else { return }
-        phase = .classifying
-        let text = session.original
-        let candidates = projects.map(RouteCandidate.init)
-        let engine = llm
-        Task {
-            await refreshOrca()
-            let d = await IntentRouter.route(text: text, candidates: candidates, llm: engine)
-            decision = d
-            Diagnostics.log("route intent=\(d.intent.rawValue) source=\(d.source) needsSelection=\(d.needsUserSelection)")
-            switch d.intent {
-            case .newProject: await enterNewProject()
-            case .skill: enterSkill()
-            case .existingProject, .unknown: enterExisting(suggested: d.suggested)
-            }
-        }
-    }
-
-    func switchIntent(_ intent: RequestIntent) {
-        outcome = nil
-        notice = nil
-        switch intent {
-        case .newProject: Task { await enterNewProject() }
-        case .skill: enterSkill()
-        default: enterExisting(suggested: nil)
-        }
-    }
-
-    // MARK: 기존 프로젝트 → 확인 → 1회 전송 (FR-08)
-
-    func enterExisting(suggested: UUID?) {
-        reviewText = session.beginReview()
-        // 추천 대상이 "연결됨"일 때만 미리 선택한다. 모호하면 비워 두고 사용자가 고른다.
-        if let s = suggested, connection[s]?.terminal != nil { selectedProjectID = s } else { selectedProjectID = nil }
-        selectedHandle = nil
-        outcome = nil
-        phase = .reviewExisting
-    }
-
-    var selectedProject: ProjectRecord? { projects.first { $0.id == selectedProjectID } }
-
-    /// 확인 화면에 보이는 그 대상. 이것과 전송 직전 재조회 결과를 대조한다.
-    var currentTarget: (TargetSnapshot, TerminalCandidate)? {
-        guard let p = selectedProject, let state = connection[p.id] else { return nil }
-        switch state {
-        case .connected(let t): return (TargetSnapshot(project: p, terminal: t), t)
-        case .needsConfirmation(let cands, _):
-            guard let h = selectedHandle, let t = cands.first(where: { $0.handle == h }) else { return nil }
-            return (TargetSnapshot(project: p, terminal: t), t)
-        default: return nil
-        }
-    }
-
-    func sendExisting() {
-        guard phase == .reviewExisting, let (target, _) = currentTarget else { return }
-        let text = reviewText
-        session.finalText = text
-        send(text: text, to: target)
-    }
-
-    private func send(text: String, to target: TargetSnapshot, retryRequestId: String? = nil) {
-        guard let d = dispatchCoordinator() else { notice = "Orca CLI를 찾지 못했습니다"; return }
-        let previous = phase
-        phase = .sending
-        statusLabel = "전송 중"
-        Task {
-            let out = await d.dispatch(text: text, to: target, retryRequestId: retryRequestId)
-            outcome = out
-            Diagnostics.log("dispatch outcome=\(out.label) chars=\(text.count)")
-            switch out {
-            case .delivered(let rid):
-                lastDelivery = (target, text, rid)
-                statusLabel = "전송 확인"
-                phase = .result
-            case .unknown(let rid, _):
-                lastDelivery = (target, text, rid)
-                statusLabel = "재확인 필요"
-                phase = .result
-            case .blocked, .failed, .rejectedDuplicate:
-                phase = previous
-                await refreshOrca()
-            }
-        }
-    }
-
-    /// 상태 불명 뒤 사용자가 화면을 확인하고 누르는 수동 재시도. 같은 requestId로만 재개한다.
-    func manualRetry() {
-        guard let last = lastDelivery, let rid = last.requestId else { return }
-        send(text: last.text, to: last.target, retryRequestId: rid)
-    }
-
-    func openInOrca() {
-        NSWorkspace.shared.open(URL(fileURLWithPath: "/Applications/Orca.app"))
-    }
-
-    // MARK: 새 프로젝트 (FR-07·09)
-
-    func enterNewProject() async {
-        phase = .classifying
+    func composeNewProject() async {
+        composingMeta = true
         let m = await PromptComposer.compose(original: session.original, llm: llm)
         meta = m
         metaText = m.markdown()
         newName = m.nameSuggestions.first ?? PromptComposer.suggestName(from: session.original)
-        creation = nil
+        if creation?.folderPath == nil { creation = nil; creationCanResume = false }
         creationMessage = nil
-        creationCanResume = false
-        phase = .reviewNew
+        creationDelivered = false
+        composingMeta = false
     }
 
     var newFolderPlan: Result<URL, FolderError> { FolderSafety.plan(parent: prefs.defaultParentFolder, name: newName) }
 
     func startCreation() {
-        guard let o = orca, let d = dispatchCoordinator() else { notice = "Orca CLI를 찾지 못했습니다"; return }
+        guard let o = orca, let d = dispatchCoordinator() else { setStatus("Orca CLI를 찾지 못했습니다", .error); return }
         var cp: CreationCheckpoint
         if let existing = creation, creationCanResume {
             cp = existing
@@ -418,15 +721,17 @@ final class AppModel: ObservableObject {
             }
             creation = final
             persistCreation(final)
+            phase = .compose
             switch result {
-            case .completed(let project, let out):
+            case .completed(let project, _):
                 if !projects.contains(where: { $0.canonicalPath == project.canonicalPath && $0.hostId == project.hostId }) {
                     projects.append(project)
                     saveProjects()
                 }
-                outcome = out
                 creationCanResume = false
-                creationMessage = nil
+                creationDelivered = true
+                prefs.lastProjectID = projects.first { $0.canonicalPath == project.canonicalPath }?.id
+                savePrefs()
                 statusLabel = "전송 확인"
                 Diagnostics.log("create.completed")
             case .stopped(let step, let msg, let canResume):
@@ -436,6 +741,21 @@ final class AppModel: ObservableObject {
             }
             await refreshOrca()
         }
+    }
+
+    /// 새 프로젝트를 마치고 일반 입력으로 돌아간다. 만든 프로젝트를 칩으로 남긴다.
+    func finishNewProject() {
+        let created = prefs.lastProjectID
+        session = ComposerSession()
+        pendingCaret = 0
+        meta = nil
+        creation = nil
+        creationDelivered = false
+        creationMessage = nil
+        newProjectMode = false
+        if let id = created, projects.contains(where: { $0.id == id }) { selectedProjectID = id; softSelection = nil }
+        setStatus("새 프로젝트에 메타 프롬프트를 전달했습니다", .ok, autoClear: 6)
+        focusTick += 1
     }
 
     /// FR-09: Git 초기화는 사용자가 이 버튼으로 따로 승인할 때만 한다.
@@ -453,45 +773,5 @@ final class AppModel: ObservableObject {
         all.removeAll { $0.id == cp.id }
         all.append(cp)
         try? stores.creations.save(Array(all.suffix(20)))
-    }
-
-    // MARK: 스킬 (FR-10)
-
-    func enterSkill() {
-        Task {
-            let orcaSkills = (try? await orca?.installedSkills()) ?? []
-            skills = SkillCatalog.discover(roots: .init(), projectPath: selectedProject?.canonicalPath, orcaSkills: orcaSkills)
-        }
-        let trimmed = session.original.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.hasPrefix("/") {
-            skillFilter = String(trimmed.dropFirst().split(separator: " ").first ?? "")
-        }
-        if selectedProjectID == nil || connection[selectedProjectID!]?.terminal == nil { selectedProjectID = nil }
-        phase = .reviewSkill
-    }
-
-    var filteredSkills: [SkillEntry] {
-        let f = skillFilter.lowercased()
-        return f.isEmpty ? skills : skills.filter { $0.name.lowercased().contains(f) || $0.description.lowercased().contains(f) }
-    }
-
-    var selectedSkill: SkillEntry? { skills.first { $0.id == selectedSkillID } }
-
-    var skillInvocation: String {
-        guard let s = selectedSkill else { return "" }
-        let a = skillArgs.trimmingCharacters(in: .whitespacesAndNewlines)
-        return a.isEmpty ? s.invocation : "\(s.invocation) \(a)"
-    }
-
-    func sendSkill() {
-        guard let s = selectedSkill, s.callable, let (target, _) = currentTarget else { return }
-        send(text: skillInvocation, to: target)
-    }
-
-    func refreshSkillsForProject() {
-        Task {
-            let orcaSkills = (try? await orca?.installedSkills()) ?? []
-            skills = SkillCatalog.discover(roots: .init(), projectPath: selectedProject?.canonicalPath, orcaSkills: orcaSkills)
-        }
     }
 }
