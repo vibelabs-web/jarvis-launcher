@@ -5,3 +5,6 @@ build/
 qa/sandbox/
 .DS_Store
 *.wav
+
+# 로컬 Claude Code 설정·메모(이 컴퓨터 전용)
+.claude/
