@@ -393,3 +393,67 @@ struct TaskStructurerSafety {
         #expect(t?.text().hasSuffix("받아쓴 원문(위 정리와 다르면 원문을 따를 것)\n\(said)") == true)
     }
 }
+
+/// 실행만 기록하고 정해 둔 출력을 돌려주는 가짜 실행기
+final class RecordingRunner: CommandRunning, @unchecked Sendable {
+    let result: CLIResult
+    var calls: [[String]] = []
+    init(stdout: String, exitCode: Int32 = 0) { result = CLIResult(exitCode: exitCode, stdout: Data(stdout.utf8), stderr: "") }
+    func run(executable: URL, arguments: [String], timeout: TimeInterval) async throws -> CLIResult {
+        calls.append(arguments)
+        return result
+    }
+}
+
+@Suite("받아쓰기 정리: claude -p (Haiku 5.5)")
+struct ClaudeCLIStructurerTests {
+    let wd = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("jl-claude-structurer-test")
+
+    @Test("도구 끔·세션 저장 안 함·설정/MCP 미사용, 받아쓴 말은 마지막 인자 하나")
+    func args() async throws {
+        let out = #"{"type":"result","subtype":"success","is_error":false,"result":"…","structured_output":{"goal":"API 500 에러 원인 보고","background":"","actions":["500 에러 원인 찾기","원인 알리기"],"constraints":["코드는 고치지 않기"],"questions":[]}}"#
+        let runner = RecordingRunner(stdout: out)
+        let llm = ClaudeCLILLM(cliPath: "/bin/echo", workDir: wd, runner: runner)
+        let said = "어제 만든 API에서 500 에러 나는데 원인 찾아서 알려만 줘 고치지는 말고"
+        let t = await TaskStructurer.structure(transcript: said, llm: llm)
+        let a = try #require(runner.calls.first)
+        #expect(a.prefix(3) == ["-p", "--model", "claude-haiku-5-5"])
+        for flag in ["--no-session-persistence", "--strict-mcp-config", "--json-schema", "--system-prompt"] { #expect(a.contains(flag)) }
+        #expect(a[a.firstIndex(of: "--tools")! + 1] == "")
+        #expect(a[a.firstIndex(of: "--setting-sources")! + 1] == "")
+        #expect(a.last?.hasSuffix(said + "\n\"\"\"") == true)
+        #expect(t?.constraints == ["코드는 고치지 않기"])
+        #expect(t?.warnings.isEmpty == true)
+    }
+
+    @Test("오류 응답·JSON 아닌 출력이면 정리하지 않는다(원문 유지)")
+    func errors() async {
+        let err = RecordingRunner(stdout: #"{"is_error":true,"result":"Not logged in"}"#, exitCode: 1)
+        #expect(await TaskStructurer.structure(transcript: "고쳐 줘", llm: ClaudeCLILLM(cliPath: "/bin/echo", workDir: wd, runner: err)) == nil)
+        let junk = RecordingRunner(stdout: "oops")
+        #expect(await TaskStructurer.structure(transcript: "고쳐 줘", llm: ClaudeCLILLM(cliPath: "/bin/echo", workDir: wd, runner: junk)) == nil)
+    }
+}
+
+@Suite("받아쓰기 정리: 할 일과 금지 구분")
+struct TaskStructurerProhibition {
+    @Test("'깨지지 않게 확인하기'는 할 일, '넣지 않기'는 조건")
+    func split() {
+        #expect(!TaskStructurer.isProhibition("모바일에서 화면이 깨지지 않는지 확인하기"))
+        #expect(TaskStructurer.isProhibition("스크린샷은 넣지 않기"))
+        #expect(TaskStructurer.isProhibition("DB 스키마는 건드리지 마"))
+        #expect(TaskStructurer.isProhibition("외부 API 사용 금지"))
+    }
+}
+
+@Suite("받아쓰기 정리: 금지 지시 감지")
+struct TaskStructurerProhibitionRequest {
+    @Test("서술 속 '않는 이상'·'없더라고'는 금지 지시가 아니다")
+    func detect() {
+        #expect(TaskStructurer.requestsProhibition("DB 스키마는 건드리지 마"))
+        #expect(TaskStructurer.requestsProhibition("원인만 알려 줘 고치지는 말고"))
+        #expect(TaskStructurer.requestsProhibition("로그인은 빼고 만들어 줘"))
+        #expect(!TaskStructurer.requestsProhibition("별도로 저장해 놓지 않는 이상 과거를 복귀할 수가 없더라고"))
+        #expect(!TaskStructurer.requestsProhibition("모바일에서도 깨지지 않게 확인해 줘"))
+    }
+}

@@ -151,7 +151,10 @@ struct ModelSettings: View {
             Section("판단 엔진 (llama.cpp, 로컬 127.0.0.1)") {
                 Toggle("로컬 LLM 사용 (끄면 규칙·템플릿만)", isOn: Binding(get: { model.prefs.useLLM }, set: { model.prefs.useLLM = $0; model.savePrefs() }))
                 Toggle("받아쓴 말을 할 일로 정리 (목표·할 일·조건, 보내기 전에 확인)", isOn: Binding(get: { model.prefs.structureDictation }, set: { model.prefs.structureDictation = $0; model.savePrefs() }))
-                    .disabled(!model.prefs.useLLM)
+                Picker("정리 엔진", selection: Binding(get: { model.prefs.structureEngine }, set: { model.prefs.structureEngine = $0; model.savePrefs() })) {
+                    Text("Claude Haiku 5.5 (claude -p · 받아쓴 말이 Anthropic으로 전송됨)").tag("claude")
+                    Text("로컬 모델 (Qwen3 1.7B · 외부 전송 없음, 품질 낮음)").tag("local")
+                }
                 TextField("llama-server 경로", text: pref(\.llamaServerPath))
                 TextField("GGUF 모델 경로", text: pref(\.llmModelPath))
                 Text(model.llmPaths == nil ? "로컬 모델을 찾지 못했습니다 — scripts/fetch-models.sh q4로 받거나 경로를 입력하세요" : "로컬 모델 사용 가능 (비워 두면 프로젝트의 .local-models를 씁니다)")

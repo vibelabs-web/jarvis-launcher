@@ -62,6 +62,8 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var lastProjectID: UUID?
     /// 받아쓴 말을 로컬 모델로 업무 지시(목표·할 일·조건)로 정리해 입력창에 넣는다
     public var structureDictation: Bool = true
+    /// 정리 엔진: "claude"(claude -p, Haiku 5.5 — 받아쓴 말이 외부로 전송됨) | "local"(로컬 모델)
+    public var structureEngine: String = "claude"
 
     public init() {}
 
@@ -80,6 +82,7 @@ public struct Preferences: Codable, Equatable, Sendable {
         p.clearInputAfterSend = (try? c.decode(Bool.self, forKey: .clearInputAfterSend)) ?? p.clearInputAfterSend
         p.lastProjectID = try? c.decode(UUID.self, forKey: .lastProjectID)
         p.structureDictation = (try? c.decode(Bool.self, forKey: .structureDictation)) ?? p.structureDictation
+        p.structureEngine = (try? c.decode(String.self, forKey: .structureEngine)) ?? p.structureEngine
         self = p
     }
 }

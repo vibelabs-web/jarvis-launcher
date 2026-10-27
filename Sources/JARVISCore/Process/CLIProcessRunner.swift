@@ -30,9 +30,12 @@ public protocol CommandRunning: Sendable {
 /// 실행 파일 URL과 인자 배열만 받는다. 셸 문자열 보간은 하지 않는다(PRD 5.5).
 public struct CLIProcessRunner: CommandRunning {
     public var maxOutputBytes: Int
+    /// 실행 위치. nil이면 앱의 현재 위치
+    public var workingDirectory: URL?
 
-    public init(maxOutputBytes: Int = 8 * 1024 * 1024) {
+    public init(maxOutputBytes: Int = 8 * 1024 * 1024, workingDirectory: URL? = nil) {
         self.maxOutputBytes = maxOutputBytes
+        self.workingDirectory = workingDirectory
     }
 
     public func run(executable: URL, arguments: [String], timeout: TimeInterval) async throws -> CLIResult {
@@ -44,6 +47,7 @@ public struct CLIProcessRunner: CommandRunning {
             let process = Process()
             process.executableURL = executable
             process.arguments = arguments
+            if let wd = workingDirectory { process.currentDirectoryURL = wd }
             let outPipe = Pipe(), errPipe = Pipe()
             process.standardOutput = outPipe
             process.standardError = errPipe

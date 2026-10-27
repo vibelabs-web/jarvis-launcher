@@ -768,18 +768,20 @@ final class AppModel: ObservableObject {
     /// 받아쓴 말을 업무 지시(목표·할 일·조건)로 정리해 입력창의 받아쓴 부분을 바꾼다. 보내지는 않는다.
     private func structureDictation(_ transcript: String) async {
         lastDictation = nil
-        guard let engine = llm else {
-            Diagnostics.log("dictation.structure skipped reason=\(prefs.useLLM ? "model-not-found" : "llm-off")")
-            setStatus("받아쓴 그대로 넣었습니다(로컬 모델이 꺼져 있어 업무 정리는 하지 않음)", .info, autoClear: 6)
+        guard let (engine, engineName) = structureEngine else {
+            Diagnostics.log("dictation.structure skipped reason=no-engine engine=\(prefs.structureEngine)")
+            setStatus(prefs.structureEngine == "claude"
+                      ? "받아쓴 그대로 넣었습니다(claude CLI를 찾지 못해 업무 정리를 하지 않음)"
+                      : "받아쓴 그대로 넣었습니다(로컬 모델이 없어 업무 정리를 하지 않음)", .warn)
             return
         }
         statusLabel = "업무로 정리 중"
-        setStatus("받아쓴 말을 할 일로 정리하는 중…", .info)
+        setStatus("받아쓴 말을 할 일로 정리하는 중… (\(engineName))", .info)
         let started = Date()
         let t = await TaskStructurer.structure(transcript: transcript, llm: engine)
         let secs = Date().timeIntervalSince(started)
         guard let t else {
-            Diagnostics.log(String(format: "dictation.structure ok=false seconds=%.2f", secs))
+            Diagnostics.log(String(format: "dictation.structure ok=false engine=%@ seconds=%.2f", engineName, secs))
             setStatus("업무 정리에 실패해 받아쓴 그대로 두었습니다. 고친 뒤 ⌘↵로 보내세요", .warn)
             return
         }
@@ -790,7 +792,7 @@ final class AppModel: ObservableObject {
         session.original = ns.replacingCharacters(in: r, with: structured)
         pendingCaret = r.location + (structured as NSString).length
         lastDictation = (structured, transcript)
-        Diagnostics.log(String(format: "dictation.structure ok=true seconds=%.2f actions=%d warnings=%d", secs, t.actions.count, t.warnings.count))
+        Diagnostics.log(String(format: "dictation.structure ok=true engine=%@ seconds=%.2f actions=%d warnings=%d", engineName, secs, t.actions.count, t.warnings.count))
         var line = StatusLine(text: t.warnings.isEmpty
                               ? "할 일 \(t.actions.count)개로 정리했습니다. 확인·수정 후 ⌘↵로 보내세요"
                               : "정리본 확인 필요: " + t.warnings.joined(separator: " · "),
@@ -798,6 +800,17 @@ final class AppModel: ObservableObject {
         line.canRevertDictation = true
         statusClearTask?.cancel()
         status = line
+    }
+
+    /// 정리 엔진. 기본은 claude -p(Haiku 5.5). 받아쓴 말이 외부로 전송되는 것은 작가님 결정(ADR-7).
+    var structureEngine: (LocalLLM, String)? {
+        if prefs.structureEngine == "claude" {
+            guard let cli = ClaudeCLILLM.locate() else { return nil }
+            // 빈 전용 폴더에서 실행해 프로젝트의 CLAUDE.md·저장소 정보가 섞이지 않게 한다
+            let wd = stores.directory.appendingPathComponent("claude-structurer", isDirectory: true)
+            return (ClaudeCLILLM(cliPath: cli, workDir: wd), "Haiku 5.5")
+        }
+        return llm.map { ($0, "로컬 모델") }
     }
 
     func revertDictation() {

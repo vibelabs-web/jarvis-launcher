@@ -4,8 +4,19 @@ import JARVISCore
 /// AC-05 예비 측정: macOS TTS(ko_KR) 음성 → 앱과 같은 WhisperCLIRecognizer로 전사 → CER·RTF.
 /// 작가님 실제 음성 40문장 측정을 대신하지 않는다(결과는 '예비'로 표시).
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path
+if CommandLine.arguments.dropFirst().first == "structure-stdin" {
+    // 한 문장만 정리해 화면에 출력한다(파일로 남기지 않음 — 작가님 실제 발화 확인용)
+    let text = String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self)
+    let llm = ClaudeCLILLM(cliPath: ClaudeCLILLM.locate()!, workDir: URL(fileURLWithPath: "\(root)/.local-data/claude-structurer"))
+    let t0 = Date()
+    let t = await TaskStructurer.structure(transcript: text.trimmingCharacters(in: .whitespacesAndNewlines), llm: llm)
+    print(String(format: "(%.2f초)", Date().timeIntervalSince(t0)))
+    print(t?.text() ?? "정리 실패")
+    print("경고: " + (t?.warnings.joined(separator: " · ") ?? "-"))
+    exit(0)
+}
 if CommandLine.arguments.dropFirst().first == "structure" {
-    try await runStructureBench(root: root)
+    try await runStructureBench(root: root, engine: CommandLine.arguments.dropFirst(2).first ?? "local")
     exit(0)
 }
 if CommandLine.arguments.dropFirst().first == "llm" {
