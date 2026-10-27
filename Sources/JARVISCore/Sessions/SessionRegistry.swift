@@ -17,7 +17,7 @@ public enum SessionRegistry {
         }
         let missingIdentity = list.terminals.filter { $0.worktreePath == nil || $0.executionHostId == nil }
 
-        let claude = samePath.filter { $0.isClaude && $0.orphaned != true }
+        let claude = samePath.filter { $0.isClaude }
         let usable = claude.filter { $0.connected != false && $0.writable != false }
 
         if let wid = project.worktreeId, usable.contains(where: { $0.worktreeId != nil && $0.worktreeId != wid }) {
@@ -41,14 +41,28 @@ public enum SessionRegistry {
         }
     }
 
+    /// Orca가 agentIdentity를 비워 보낸 로컬 터미널만 화면을 읽어 Claude 여부를 채운다(읽기 전용, B14).
+    public static func enrichWithScreens(_ list: TerminalListResult,
+                                         readScreen: (String) async -> [String]?) async -> TerminalListResult {
+        var out = list
+        for i in out.terminals.indices {
+            let t = out.terminals[i]
+            guard t.agentIdentity != "claude", t.isLocal, t.worktreePath != nil, t.connected != false else { continue }
+            if let lines = await readScreen(t.handle) {
+                out.terminals[i].screenDetectedClaude = ScreenClassifier.looksLikeClaude(lines)
+            }
+        }
+        return out
+    }
+
     /// 설정 > 프로젝트 화면에 보여 줄 후보 목록. 페어링 가능 여부를 함께 표시한다.
     public static func pairableCandidates(_ list: TerminalListResult) -> [(terminal: TerminalCandidate, pairable: Bool, reason: String)] {
         list.terminals.map { t in
             if t.worktreePath == nil || t.executionHostId == nil { return (t, false, "미확인: 경로·호스트 정보 없음") }
             if !t.isLocal { return (t, false, "원격 호스트") }
-            if t.orphaned == true { return (t, false, "분리된 터미널") }
-            if !t.isClaude { return (t, false, "Claude Code 아님/미확인") }
-            return (t, true, "Claude Code")
+            if !t.isClaude { return (t, false, t.orphaned == true ? "Claude 아님(분리된 탭)" : "Claude Code 아님/미확인") }
+            let how = t.agentIdentity == "claude" ? "Claude Code" : "Claude Code(화면 확인)"
+            return (t, true, t.orphaned == true ? "\(how) · Orca 탭과 분리됨" : how)
         }
     }
 }

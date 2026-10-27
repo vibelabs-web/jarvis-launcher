@@ -25,10 +25,11 @@
 | 저장소 | `orca repo list --json` | `repos[].id, path, kind(git\|folder)` | 04-repos |
 
 ### 식별 가능성 (PRD 9.3-1)
-- 경로·호스트·에이전트 종류: **식별 가능**. `worktreePath`, `executionHostId`, `agentIdentity`(`claude` 또는 null)를 쓴다.
+- 경로·호스트: **식별 가능**. `worktreePath`, `executionHostId`를 쓴다.
+- 에이전트 종류: `agentIdentity`는 **신뢰할 수 없다**. 실제로 Claude Code가 돌고 있는 터미널 상당수가 null로 오고, 같은 터미널이 `claude`에서 null로 바뀌기도 했다(2026-10-27 실측). 값이 비면 `terminal read --screen`으로 Claude TUI(❯ 프롬프트 + 상태줄 문구)를 판별한다(B14).
 - **Claude 세션 ID: 제공되지 않는다.** 같은 worktree에 Claude가 두 개 이상이면 자동으로 매칭하지 않고 매번 수동으로 선택하게 한다.
 - `worktreePath`는 **worktree 루트**다. 그 하위 폴더에서 `cd`로 시작한 세션도 루트 경로로 보고된다(m0b-09).
-- `orphaned: true`이고 `agentIdentity: null`인 터미널은 일반 셸이거나 미확인이므로 전송 대상에서 뺀다.
+- `orphaned: true`(Orca 탭과 분리) 터미널도 `connected·writable`이고 화면이 Claude면 전송할 수 있다(실측 2개). 다만 Orca 화면에서 바로 보이지 않을 수 있어 앱에 경고를 표시한다.
 - 원격 호스트는 `hostScope.omittedHostIds`에 나온다. MVP에서는 `executionHostId == "local"`인 터미널에만 보낸다.
 
 ## 3. 쓰기 명령 (실증 결과)

@@ -39,4 +39,16 @@ public enum ScreenClassifier {
         if promptLine { return .ready(planMode: planMode, busy: busy) }
         return .unknown
     }
+
+    /// Claude Code TUI 표지: 하단 상태줄 문구. Orca의 agentIdentity가 비었을 때 쓴다(Claude Code 2.1.311 기준).
+    static let claudeFooterMarkers = ["shift+tab", "plan mode on", "bypass permissions", "accept edits",
+                                      "? for shortcuts", "esc to interrupt", "auto-accept"]
+
+    public static func looksLikeClaude(_ allLines: [String]) -> Bool {
+        let lines = Array(allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.suffix(20))
+        if let last = lines.last, last.range(of: shellPromptPattern, options: .regularExpression) != nil { return false }
+        let text = lines.joined(separator: "\n")
+        let hasPrompt = lines.contains { $0.trimmingCharacters(in: .whitespaces).hasPrefix("❯") }
+        return hasPrompt && claudeFooterMarkers.contains { text.contains($0) }
+    }
 }

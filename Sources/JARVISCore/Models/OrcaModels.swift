@@ -25,6 +25,8 @@ public struct TerminalCandidate: Codable, Equatable, Identifiable, Sendable {
     public var executionHostId: String?
     public var agentIdentity: String?
     public var lastOutputAt: Double?
+    /// Orca가 agentIdentity를 비워 보내도 화면에 Claude Code TUI가 보이면 true(앱이 채움, B14)
+    public var screenDetectedClaude: Bool?
 
     public var id: String { handle }
 
@@ -45,7 +47,9 @@ public struct TerminalCandidate: Codable, Equatable, Identifiable, Sendable {
         self.lastOutputAt = lastOutputAt
     }
 
-    public var isClaude: Bool { agentIdentity == "claude" }
+    /// Orca 표시 또는 화면 판별 중 하나라도 Claude면 Claude로 본다.
+    public var isClaude: Bool { agentIdentity == "claude" || screenDetectedClaude == true }
+    public var folderName: String { worktreePath.map { ($0 as NSString).lastPathComponent } ?? "미확인" }
     public var isLocal: Bool { executionHostId == "local" }
 }
 

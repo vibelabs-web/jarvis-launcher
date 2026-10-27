@@ -35,8 +35,8 @@ public enum SendGuard {
         guard let host = current.executionHostId, host == expected.hostId, host == "local" else {
             return .hostChanged(current.executionHostId ?? "알 수 없음")
         }
-        guard current.isClaude else { return .notClaude }
-        guard current.connected == true, current.writable == true, current.orphaned != true else { return .notWritable }
+        guard current.isClaude || ScreenClassifier.looksLikeClaude(screen) else { return .notClaude }
+        guard current.connected == true, current.writable == true else { return .notWritable }
         switch ScreenClassifier.classify(screen) {
         case .ready: return nil
         case .dialog(let d): return .screen("화면에 대화상자/질문이 떠 있습니다 — \(d)")

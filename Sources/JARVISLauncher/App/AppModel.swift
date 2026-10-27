@@ -167,7 +167,9 @@ final class AppModel: ObservableObject {
             return
         }
         do {
-            let list = try await orca.listTerminals()
+            let raw = try await orca.listTerminals()
+            // Orca가 agentIdentity를 비워 보내는 Claude 세션이 있어 화면으로 보강한다(B14)
+            let list = await SessionRegistry.enrichWithScreens(raw) { h in try? await orca.readScreen(handle: h) }
             lastList = list
             orcaProblem = nil
             lastRefresh = Date()
@@ -182,7 +184,7 @@ final class AppModel: ObservableObject {
             }
             connection = states
             saveProjects()
-            Diagnostics.log("orca.refresh terminals=\(list.terminals.count) projects=\(projects.count) connected=\(states.values.filter { $0.terminal != nil }.count)")
+            Diagnostics.log("orca.refresh terminals=\(list.terminals.count) claudeByOrca=\(list.terminals.filter { $0.agentIdentity == "claude" }.count) claudeByScreen=\(list.terminals.filter { $0.screenDetectedClaude == true }.count) projects=\(projects.count) connected=\(states.values.filter { $0.terminal != nil }.count)")
         } catch {
             orcaProblem = error.localizedDescription
             connection = Dictionary(uniqueKeysWithValues: projects.map { ($0.id, .unknown(reason: error.localizedDescription)) })

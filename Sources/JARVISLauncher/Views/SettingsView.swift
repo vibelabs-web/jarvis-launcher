@@ -78,7 +78,7 @@ struct ProjectSettings: View {
                 TableColumn("설명(추천에 사용)") { p in
                     TextField("예: 매출 대시보드", text: binding(p, \.note)).textFieldStyle(.plain)
                 }
-                TableColumn("경로") { p in Text(p.canonicalPath).lineLimit(1).truncationMode(.head).help(p.canonicalPath) }
+                TableColumn("경로") { p in Text(p.canonicalPath).lineLimit(1).truncationMode(.middle).help(p.canonicalPath) }
                 TableColumn("상태") { p in Text(model.connection[p.id]?.label ?? "미확인") }.width(90)
                 TableColumn("") { p in Button("해제") { model.unpair(p.id) } }.width(44)
             }
@@ -86,13 +86,14 @@ struct ProjectSettings: View {
             Text("Orca 터미널 (현재)").bold()
             if let list = model.lastList {
                 Table(SessionRegistry.pairableCandidates(list).map(Row.init)) {
-                    TableColumn("경로") { r in Text(r.t.worktreePath ?? "미확인").lineLimit(1).truncationMode(.head) }
-                    TableColumn("호스트") { r in Text(r.t.executionHostId ?? "미확인") }.width(60)
-                    TableColumn("종류") { r in Text(r.reason) }.width(150)
+                    TableColumn("프로젝트") { r in Text(r.t.folderName).fontWeight(.medium) }.width(min: 110, ideal: 150)
+                    TableColumn("세션 제목") { r in Text(r.t.title ?? "—").foregroundStyle(.secondary).lineLimit(1) }.width(min: 120, ideal: 180)
+                    TableColumn("경로") { r in Text(r.t.worktreePath ?? "미확인").lineLimit(1).truncationMode(.middle).help(r.t.worktreePath ?? "") }
+                    TableColumn("종류") { r in Text(r.reason).foregroundStyle(r.pairable ? Color.primary : Color.secondary) }.width(min: 120, ideal: 170)
                     TableColumn("") { r in
                         Button("연결") { model.pair(r.t) }
                             .disabled(!r.pairable || model.projects.contains { $0.canonicalPath == PathTools.canonical(r.t.worktreePath ?? "") })
-                    }.width(50)
+                    }.width(44)
                 }
                 .frame(minHeight: 140)
                 if let omitted = list.hostScope?.omittedHostIds, !omitted.isEmpty {

@@ -79,6 +79,57 @@ struct SessionRegistryTests {
     }
 }
 
+@Suite("B14 Orca가 agentIdentity를 비워 보낸 Claude 세션")
+struct ScreenDetectedClaudeTests {
+    func list() -> TerminalListResult {
+        TerminalListResult(terminals: [
+            TerminalCandidate(handle: "term_obs", incarnationId: "i1", orphaned: false, worktreePath: "/tmp/jl/obs", title: "승인 작업 개선", agentIdentity: nil),
+            TerminalCandidate(handle: "term_sdlc", incarnationId: "i2", orphaned: true, worktreePath: "/tmp/jl/sdlc", agentIdentity: nil),
+            TerminalCandidate(handle: "term_sh", incarnationId: "i3", orphaned: true, worktreePath: "/tmp/jl/yt", agentIdentity: nil),
+        ])
+    }
+
+    @Test("화면에 Claude 상태줄이 있으면 Claude로 판별하고 연결 가능")
+    func enrichAndPair() async {
+        let screens = ["term_obs": Fixture.lines("screen-claude-bypass.txt"),
+                       "term_sdlc": Fixture.lines("screen-claude-bypass.txt"),
+                       "term_sh": Fixture.lines("screen-shell.txt")]
+        let enriched = await SessionRegistry.enrichWithScreens(list()) { screens[$0] }
+        let rows = Dictionary(uniqueKeysWithValues: SessionRegistry.pairableCandidates(enriched).map { ($0.terminal.handle, $0) })
+        #expect(rows["term_obs"]?.pairable == true)
+        #expect(rows["term_obs"]?.reason == "Claude Code(화면 확인)")
+        #expect(rows["term_sdlc"]?.pairable == true)
+        #expect(rows["term_sdlc"]?.reason.contains("분리") == true)
+        #expect(rows["term_sh"]?.pairable == false)
+        let p = ProjectRecord(alias: "obs", canonicalPath: PathTools.canonical("/tmp/jl/obs"))
+        #expect(SessionRegistry.resolve(project: p, list: enriched).terminal?.handle == "term_obs")
+        #expect(enriched.terminals[0].folderName == "obs")
+    }
+
+    @Test("agentIdentity가 비어도 화면이 Claude면 1회 전송, 셸이면 차단")
+    func dispatchByScreen() async {
+        let o = FakeOrca()
+        let t = list().terminals[0]
+        o.setShow(t)
+        o.setScreen("term_obs", Fixture.lines("screen-claude-bypass.txt"))
+        let target = TargetSnapshot(projectID: UUID(), handle: "term_obs", incarnationId: "i1",
+                                    canonicalPath: PathTools.canonical("/tmp/jl/obs"), hostId: "local")
+        let out = await DispatchCoordinator(orca: o).dispatch(text: "작업", to: target)
+        #expect(out.label == "터미널에 전달됨")
+        o.setScreen("term_obs", Fixture.lines("screen-shell.txt"))
+        let out2 = await DispatchCoordinator(orca: o).dispatch(text: "작업", to: target)
+        #expect(out2 == .blocked(.notClaude))
+        #expect(o.sendCount == 1)
+    }
+
+    @Test func detector() {
+        #expect(ScreenClassifier.looksLikeClaude(Fixture.lines("screen-claude-bypass.txt")))
+        #expect(ScreenClassifier.looksLikeClaude(Fixture.lines("screen-plan-ready.txt")))
+        #expect(!ScreenClassifier.looksLikeClaude(Fixture.lines("screen-shell.txt")))
+        #expect(!ScreenClassifier.looksLikeClaude(Fixture.lines("screen-trust-then-exit.txt")))
+    }
+}
+
 @Suite("AC-13~15 전송 안전")
 struct DispatchTests {
     let target = TargetSnapshot(projectID: UUID(), handle: "term_a1", incarnationId: "inc-a1",

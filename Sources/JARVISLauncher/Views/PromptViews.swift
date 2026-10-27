@@ -200,7 +200,7 @@ struct TargetPicker: View {
                     GridRow { Text("호스트").foregroundStyle(.secondary); Text(p.hostId == "local" ? "이 Mac (local)" : p.hostId) }
                     GridRow { Text("상태").foregroundStyle(.secondary); Text(stateText(state)) }
                     if let (_, t) = model.currentTarget {
-                        GridRow { Text("터미널").foregroundStyle(.secondary); Text("Claude Code · \(t.handle.prefix(13))… · Orca") }
+                        GridRow { Text("터미널").foregroundStyle(.secondary); Text("Claude Code · \(t.title ?? String(t.handle.prefix(13)) + "…")\(t.orphaned == true ? " · Orca 탭과 분리됨" : "")") }
                     }
                 }
                 .font(.callout)
@@ -208,7 +208,7 @@ struct TargetPicker: View {
                     Picker("터미널 직접 선택", selection: $model.selectedHandle) {
                         Text("고르세요").tag(String?.none)
                         ForEach(cands) { t in
-                            Text("\(t.handle.prefix(13))… · 마지막 출력 \(relative(t.lastOutputAt))").tag(String?.some(t.handle))
+                            Text("\(t.title ?? String(t.handle.prefix(13)) + "…") · 마지막 출력 \(relative(t.lastOutputAt))").tag(String?.some(t.handle))
                         }
                     }
                 }
