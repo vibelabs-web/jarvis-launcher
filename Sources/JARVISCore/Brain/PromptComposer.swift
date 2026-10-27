@@ -98,6 +98,10 @@ public enum PromptComposer {
     /// 원문 자체는 항상 그대로 들어가므로 정보 손실은 없고, 경고는 검토용이다.
     public static func preservationWarnings(original: String, generated m: MetaPrompt) -> [String] {
         let body = ([m.purpose, m.firstStep] + m.scope + m.doneCriteria + m.constraints + m.questions).joined(separator: "\n")
+        return preservationWarnings(original: original, body: body)
+    }
+
+    public static func preservationWarnings(original: String, body: String) -> [String] {
         var tokens: [String] = []
         let patterns = [#"[~/]?[\w.-]*/[\w./-]+"#, #"\d+(\.\d+)*"#]
         for p in patterns {

@@ -330,3 +330,66 @@ struct SkillTests {
         #expect(byName["/broken"]?.first?.description == "")
     }
 }
+
+@Suite("받아쓰기 → 업무 지시 정리")
+struct TaskStructurerTests {
+    let said = "음 그 매출 대시보드에서 날짜 필터가 이상한데 src/sales 쪽 보고 고쳐 주고 테스트도 돌려 줘 근데 DB 스키마는 건드리지 마"
+
+    @Test("정리본: 목표·할 일 번호·조건, 부정 조건 보존")
+    func structured() async {
+        let out = #"{"goal":"매출 대시보드 날짜 필터 오류 수정","actions":["src/sales 코드에서 날짜 필터 원인 찾기","필터 고치기","테스트 실행하기"],"constraints":["DB 스키마는 건드리지 말 것"],"questions":[]}"#
+        let t = await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: out))
+        #expect(t?.actions.count == 3)
+        #expect(t?.warnings.isEmpty == true)
+        let text = t?.text() ?? ""
+        #expect(text.hasPrefix("목표: 매출 대시보드"))
+        #expect(text.contains("1. src/sales"))
+        #expect(text.contains("조건·하지 말 것\n- DB 스키마는 건드리지 말 것"))
+        #expect(!text.contains("확인할 점"))
+    }
+
+    @Test("정리본이 경로·금지 조건을 빠뜨리면 경고")
+    func lossyWarns() async {
+        let out = #"{"goal":"날짜 필터 수정","actions":["필터 고치기"],"constraints":[],"questions":[]}"#
+        let t = await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: out))
+        #expect(t?.warnings.contains { $0.contains("src/sales") } == true)
+        #expect(t?.warnings.contains { $0.contains("부정") } == true)
+    }
+
+    @Test("모델이 없거나 출력이 깨지면 정리하지 않는다(원문 유지)")
+    func fallback() async {
+        #expect(await TaskStructurer.structure(transcript: said, llm: nil) == nil)
+        #expect(await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: "not json")) == nil)
+        #expect(await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: #"{"goal":"x","actions":[],"constraints":[],"questions":[]}"#)) == nil)
+    }
+}
+
+@Suite("받아쓰기 정리: 실모델에서 본 잘못된 출력 거르기")
+struct TaskStructurerRealModelCases {
+    @Test("대상 없는 '하지 마'는 버리고 경고, 할 일에 섞인 금지는 조건으로")
+    func emptyNegation() async {
+        let said = "README 업데이트 해 줘 설치 방법 정리하고 스크린샷은 아직 넣지 마"
+        let out = #"{"goal":"README 업데이트","actions":["README 업데이트하기","설치 방법 정리하기","스크린샷을 넣지 마"],"constraints":["하지 마"],"questions":[]}"#
+        let t = await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: out))
+        #expect(t?.actions == ["README 업데이트하기", "설치 방법 정리하기"])
+        #expect(t?.constraints == ["스크린샷을 넣지 마"])
+        #expect(t?.warnings.isEmpty == true)
+
+        let lost = #"{"goal":"README 업데이트","actions":["README 업데이트하기"],"constraints":["하지 마"],"questions":[]}"#
+        let t2 = await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: lost))
+        #expect(t2?.constraints.isEmpty == true)
+        #expect(t2?.warnings.contains { $0.contains("부정") } == true)
+    }
+}
+
+@Suite("받아쓰기 정리: 지어낸 금지 조건·원문 첨부")
+struct TaskStructurerSafety {
+    @Test("원문에 없는 금지 조건은 버리고, 정리본 끝에 원문을 붙인다")
+    func hallucinatedNegation() async {
+        let said = "테스트 커버리지 80퍼센트 넘게 올려 줘 우선 utils 폴더부터"
+        let out = #"{"goal":"커버리지 80퍼센트 이상","actions":["utils 폴더부터 커버리지 올리기"],"constraints":["테스트 커버리지 80퍼센트 이상으로 올리지 않기"],"questions":[]}"#
+        let t = await TaskStructurer.structure(transcript: said, llm: FakeLLM(output: out))
+        #expect(t?.constraints.isEmpty == true)
+        #expect(t?.text().hasSuffix("받아쓴 원문(위 정리와 다르면 원문을 따를 것)\n\(said)") == true)
+    }
+}

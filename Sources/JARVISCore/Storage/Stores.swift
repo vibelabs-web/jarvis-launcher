@@ -60,6 +60,8 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var clearInputAfterSend: Bool = true
     /// 다음 호출 때 프로젝트 칩에 미리 채울 마지막 대상
     public var lastProjectID: UUID?
+    /// 받아쓴 말을 로컬 모델로 업무 지시(목표·할 일·조건)로 정리해 입력창에 넣는다
+    public var structureDictation: Bool = true
 
     public init() {}
 
@@ -77,6 +79,7 @@ public struct Preferences: Codable, Equatable, Sendable {
         p.useLLM = (try? c.decode(Bool.self, forKey: .useLLM)) ?? p.useLLM
         p.clearInputAfterSend = (try? c.decode(Bool.self, forKey: .clearInputAfterSend)) ?? p.clearInputAfterSend
         p.lastProjectID = try? c.decode(UUID.self, forKey: .lastProjectID)
+        p.structureDictation = (try? c.decode(Bool.self, forKey: .structureDictation)) ?? p.structureDictation
         self = p
     }
 }

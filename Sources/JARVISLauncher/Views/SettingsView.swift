@@ -150,6 +150,8 @@ struct ModelSettings: View {
             }
             Section("판단 엔진 (llama.cpp, 로컬 127.0.0.1)") {
                 Toggle("로컬 LLM 사용 (끄면 규칙·템플릿만)", isOn: Binding(get: { model.prefs.useLLM }, set: { model.prefs.useLLM = $0; model.savePrefs() }))
+                Toggle("받아쓴 말을 할 일로 정리 (목표·할 일·조건, 보내기 전에 확인)", isOn: Binding(get: { model.prefs.structureDictation }, set: { model.prefs.structureDictation = $0; model.savePrefs() }))
+                    .disabled(!model.prefs.useLLM)
                 TextField("llama-server 경로", text: pref(\.llamaServerPath))
                 TextField("GGUF 모델 경로", text: pref(\.llmModelPath))
                 HStack {

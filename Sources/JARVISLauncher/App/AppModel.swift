@@ -17,6 +17,7 @@ final class AppModel: ObservableObject {
         var canRetry = false
         var canOpenOrca = false
         var confirmInferredSkill = false
+        var canRevertDictation = false
     }
 
     /// 칩 위로 펼치는 목록의 한 줄
@@ -95,6 +96,10 @@ final class AppModel: ObservableObject {
 
     let stores: AppStores
     private var recorder: MicRecorder?
+    /// 녹음 중 파형
+    let meter = MicMeter()
+    /// 마지막 받아쓰기의 (정리본, 받아쓴 원문). '원문으로 되돌리기'용
+    var lastDictation: (structured: String, transcript: String)?
     private var llmEngine: LlamaServerLLM?
     private var dispatcher: DispatchCoordinator?
     private var suggestTask: Task<Void, Never>?
@@ -117,7 +122,7 @@ final class AppModel: ObservableObject {
     var panelHeight: CGFloat {
         var h: CGFloat = 214
         if targetSummary != nil { h += 20 }
-        if let s = status { h += s.canRetry || s.confirmInferredSkill ? 34 : 24 }
+        if let s = status { h += s.canRetry || s.confirmInferredSkill || s.canRevertDictation ? 34 : 24 }
         if listKind != nil { h += min(CGFloat(max(listItems.count, 1)), 6) * 40 + 30 }
         if showNewProjectCard { h += 360 }
         return h
@@ -682,6 +687,9 @@ final class AppModel: ObservableObject {
             }
             do {
                 let r = try MicRecorder(directory: stores.directory.appendingPathComponent("tmp-audio", isDirectory: true))
+                let meter = self.meter
+                r.onLevel = { level in Task { @MainActor in meter.push(level) } }
+                meter.start()
                 try r.start()
                 recorder = r
                 phase = .recording
@@ -695,6 +703,7 @@ final class AppModel: ObservableObject {
     }
 
     func cancelRecording() {
+        meter.stop()
         recorder?.cancel()
         recorder = nil
         phase = .compose
@@ -705,6 +714,7 @@ final class AppModel: ObservableObject {
         guard let r = recorder else { phase = .compose; return }
         recorder = nil
         let wav = r.stop()
+        meter.stop()
         phase = .transcribing
         statusLabel = "음성 변환 중"
         let rec = recognizer
@@ -719,8 +729,9 @@ final class AppModel: ObservableObject {
                 // 넣은 글자 뒤로 커서를 옮긴다(B15: 예전에는 커서 위치를 받지 못해 항상 끝에 붙였다)
                 let after = (session.original as NSString).length
                 pendingCaret = min((caret ?? before) + (after - before), after)
-                scheduleSuggestion()
                 Diagnostics.log(String(format: "stt.done seconds=%.2f chars=%d", Date().timeIntervalSince(started), text.count))
+                if prefs.structureDictation { await structureDictation(text.trimmingCharacters(in: .whitespacesAndNewlines)) }
+                scheduleSuggestion()
             } catch {
                 setStatus(error.localizedDescription + " — 텍스트로 입력할 수 있습니다", .warn)
                 Diagnostics.log("stt.failed \(error.localizedDescription)")
@@ -729,6 +740,54 @@ final class AppModel: ObservableObject {
             updateMenuStatus()
             focusTick += 1
         }
+    }
+
+    /// 받아쓴 말을 업무 지시(목표·할 일·조건)로 정리해 입력창의 받아쓴 부분을 바꾼다. 보내지는 않는다.
+    private func structureDictation(_ transcript: String) async {
+        lastDictation = nil
+        guard let engine = llm else {
+            setStatus("받아쓴 그대로 넣었습니다(로컬 모델이 꺼져 있어 업무 정리는 하지 않음)", .info, autoClear: 6)
+            return
+        }
+        statusLabel = "업무로 정리 중"
+        setStatus("받아쓴 말을 할 일로 정리하는 중…", .info)
+        let started = Date()
+        let t = await TaskStructurer.structure(transcript: transcript, llm: engine)
+        let secs = Date().timeIntervalSince(started)
+        guard let t else {
+            Diagnostics.log(String(format: "dictation.structure ok=false seconds=%.2f", secs))
+            setStatus("업무 정리에 실패해 받아쓴 그대로 두었습니다. 고친 뒤 ⌘↵로 보내세요", .warn)
+            return
+        }
+        let structured = t.text()
+        let ns = session.original as NSString
+        let r = ns.range(of: transcript, options: .backwards)
+        guard r.location != NSNotFound else { status = nil; return }  // 그사이 직접 고쳤으면 건드리지 않는다
+        session.original = ns.replacingCharacters(in: r, with: structured)
+        pendingCaret = r.location + (structured as NSString).length
+        lastDictation = (structured, transcript)
+        Diagnostics.log(String(format: "dictation.structure ok=true seconds=%.2f actions=%d warnings=%d", secs, t.actions.count, t.warnings.count))
+        var line = StatusLine(text: t.warnings.isEmpty
+                              ? "할 일 \(t.actions.count)개로 정리했습니다. 확인·수정 후 ⌘↵로 보내세요"
+                              : "정리본 확인 필요: " + t.warnings.joined(separator: " · "),
+                              kind: t.warnings.isEmpty ? .info : .warn)
+        line.canRevertDictation = true
+        statusClearTask?.cancel()
+        status = line
+    }
+
+    func revertDictation() {
+        guard let d = lastDictation else { return }
+        let ns = session.original as NSString
+        let r = ns.range(of: d.structured, options: .backwards)
+        guard r.location != NSNotFound else {
+            setStatus("정리본을 이미 고쳐서 되돌릴 수 없습니다", .warn, autoClear: 4)
+            return
+        }
+        session.original = ns.replacingCharacters(in: r, with: d.transcript)
+        pendingCaret = r.location + (d.transcript as NSString).length
+        lastDictation = nil
+        setStatus("받아쓴 원문으로 되돌렸습니다", .info, autoClear: 4)
     }
 
     // MARK: 새 프로젝트 카드 (FR-07·09)

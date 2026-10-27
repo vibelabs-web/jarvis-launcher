@@ -7,6 +7,8 @@ final class MicRecorder {
     private var file: AVAudioFile?
     private var converter: AVAudioConverter?
     let url: URL
+    /// 버퍼마다 소리 크기(0…1). 오디오 스레드에서 불린다.
+    var onLevel: ((Float) -> Void)?
     private let target = AVAudioFormat(commonFormat: .pcmFormatInt16, sampleRate: 16_000, channels: 1, interleaved: true)!
 
     init(directory: URL) throws {
@@ -49,6 +51,14 @@ final class MicRecorder {
     }
 
     private func write(_ buffer: AVAudioPCMBuffer) {
+        if let onLevel, let ch = buffer.floatChannelData?[0], buffer.frameLength > 0 {
+            var sum: Float = 0
+            for i in 0..<Int(buffer.frameLength) { sum += ch[i] * ch[i] }
+            let rms = (sum / Float(buffer.frameLength)).squareRoot()
+            // 말소리 RMS는 대략 0.01~0.3 → 로그 눈금으로 0…1에 펼친다(-50dB…0dB)
+            let db = 20 * log10(max(rms, 1e-6))
+            onLevel(min(max((db + 50) / 50, 0), 1))
+        }
         guard let converter, let file else { return }
         let ratio = target.sampleRate / buffer.format.sampleRate
         let capacity = AVAudioFrameCount(Double(buffer.frameLength) * ratio) + 32

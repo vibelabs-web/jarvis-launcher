@@ -75,8 +75,8 @@ struct ChipBar: View {
             .disabled(model.phase != .compose && model.phase != .recording)
             .help(model.phase == .recording ? "녹음 중지 — 받아 적기" : "받아쓰기(음성은 저장하지 않음)")
             .accessibilityLabel(model.phase == .recording ? "녹음 중지" : "받아쓰기")
-            if model.phase == .recording { Text("녹음 중").font(.caption).foregroundStyle(.red) }
-            if model.phase == .transcribing { ProgressView().controlSize(.small); Text("받아 적는 중").font(.caption) }
+            if model.phase == .recording { WaveformView(meter: model.meter) }
+            if model.phase == .transcribing { ProgressView().controlSize(.small); Text(model.statusLabel).font(.caption) }
             Spacer(minLength: 8)
             skillChip
             sendButton
@@ -267,6 +267,7 @@ struct StatusLineView: View {
             if line.confirmInferredSkill { Button("확인했음, 보내기") { model.confirmInferredAndSend() } }
             if line.canOpenOrca { Button("Orca에서 열기") { model.openInOrca() } }
             if line.canRetry { Button("같은 요청으로 재시도") { model.manualRetry() } }
+            if line.canRevertDictation { Button("원문으로 되돌리기") { model.revertDictation() } }
         }
         .controlSize(.small)
         .accessibilityElement(children: .contain)
@@ -288,5 +289,37 @@ struct StatusLineView: View {
         case .warn: return .orange
         case .error: return .red
         }
+    }
+}
+
+
+// MARK: - 녹음 중 파형
+
+/// 마이크 소리 크기를 실시간 막대로 보여 준다. 소리가 2초 넘게 안 들어오면 알린다.
+struct WaveformView: View {
+    @ObservedObject var meter: MicMeter
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle().fill(Color.red).frame(width: 7, height: 7)
+            HStack(alignment: .center, spacing: 2) {
+                ForEach(Array(meter.levels.enumerated()), id: \.offset) { _, level in
+                    Capsule()
+                        .fill(Color.red.opacity(0.75))
+                        .frame(width: 2.5, height: max(2, CGFloat(level) * 22))
+                }
+            }
+            .frame(height: 24)
+            .animation(.linear(duration: 0.08), value: meter.levels)
+            if let start = meter.startedAt {
+                TimelineView(.periodic(from: start, by: 1)) { ctx in
+                    let s = Int(ctx.date.timeIntervalSince(start))
+                    Text(String(format: "%d:%02d", s / 60, s % 60)).font(.caption.monospacedDigit()).foregroundStyle(.red)
+                }
+            }
+            if meter.silent { Text("소리가 들리지 않습니다").font(.caption2).foregroundStyle(.orange) }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(meter.silent ? "녹음 중, 소리가 들리지 않음" : "녹음 중")
     }
 }
