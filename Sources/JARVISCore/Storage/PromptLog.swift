@@ -16,6 +16,9 @@ public struct PromptEntry: Equatable, Identifiable, Sendable {
     public var viaLauncher: Bool
     /// 받아쓰기였다면 받아쓴 원문
     public var transcript: String?
+
+    /// 목록용 제목: '목표:' 줄이 있으면 그 내용, 없으면 첫 줄
+    public var title: String { PromptLog.title(of: text) }
 }
 
 public enum PromptLogError: Error, LocalizedError {
@@ -49,6 +52,18 @@ public final class PromptLog {
           transcript TEXT, project TEXT NOT NULL, skill TEXT, outcome TEXT NOT NULL);
         CREATE INDEX IF NOT EXISTS sends_sha ON launcher_sends(text_sha);
         """)
+        try migrateWrappedPrompts()
+    }
+
+    /// B24 이전에 감싸개 태그째 저장된 행을 정리한다(본문과 짝짓기용 해시를 다시 계산)
+    private func migrateWrappedPrompts() throws {
+        let rows = try query("SELECT id, text FROM prompts WHERE text LIKE '%<pasted_content%'", []) { s in
+            (sqlite3_column_int64(s, 0), Self.column(s, 1))
+        }
+        for (id, text) in rows {
+            let c = Self.clean(text)
+            try run("UPDATE prompts SET text = ?, text_sha = ? WHERE id = ?", [.text(c), .text(Self.sha(c)), .int(id)])
+        }
     }
 
     deinit { sqlite3_close_v2(db) }
@@ -66,7 +81,8 @@ public final class PromptLog {
     /// 훅에서 부른다. 일시 중지 상태거나 빈 글이면 아무것도 하지 않고 false.
     @discardableResult
     public func record(prompt: String, sessionId: String, cwd: String, at time: Date = Date()) throws -> Bool {
-        let text = prompt.trimmingCharacters(in: .whitespacesAndNewlines)
+        // Claude Code가 붙여넣은 글을 감싸는 <pasted_content …> 태그는 벗긴다(B24). 런처 전송 기록과 짝지을 때도 같은 글이어야 한다
+        let text = Self.clean(prompt)
         guard !isPaused, !text.isEmpty else { return false }
         let masked = SecretMasker.mask(text)
         try run("INSERT INTO prompts(ts, session_id, cwd, project, text, text_sha) VALUES(?,?,?,?,?,?)",
@@ -80,7 +96,7 @@ public final class PromptLog {
                                    at time: Date = Date()) throws {
         guard !isPaused else { return }
         try run("INSERT INTO launcher_sends(ts, text_sha, transcript, project, skill, outcome) VALUES(?,?,?,?,?,?)",
-                [.real(time.timeIntervalSince1970), .text(Self.sha(text.trimmingCharacters(in: .whitespacesAndNewlines))),
+                [.real(time.timeIntervalSince1970), .text(Self.sha(Self.clean(text))),
                  transcript.map { .text(SecretMasker.mask($0)) } ?? .null, .text(project), skill.map { .text($0) } ?? .null,
                  .text(outcome)])
     }
@@ -110,7 +126,8 @@ public final class PromptLog {
         let rows = try query(sql, [.real(Self.pairWindow), .real(Self.pairWindow),
                                    project.map { .text($0) } ?? .null, project.map { .text($0) } ?? .null]) { s in
             PromptEntry(id: sqlite3_column_int64(s, 0), time: Date(timeIntervalSince1970: sqlite3_column_double(s, 1)),
-                        sessionId: Self.column(s, 2), cwd: Self.column(s, 3), project: Self.column(s, 4), text: Self.column(s, 5),
+                        sessionId: Self.column(s, 2), cwd: Self.column(s, 3), project: Self.column(s, 4),
+                        text: Self.clean(Self.column(s, 5)),  // 태그를 벗기기 전에 저장된 기록도 깨끗하게 보여 준다
                         isFirst: sqlite3_column_int(s, 6) != 0,
                         viaLauncher: sqlite3_column_int(s, 8) != 0,
                         transcript: sqlite3_column_type(s, 7) == SQLITE_NULL ? nil : Self.column(s, 7))
@@ -163,6 +180,20 @@ public final class PromptLog {
         var best = 0, cur = 0
         for c in s { if c == "`" { cur += 1; best = max(best, cur) } else { cur = 0 } }
         return best
+    }
+
+    /// `<pasted_content id="…">` 같은 Claude Code 감싸개 태그를 벗기고 앞뒤 공백을 정리한다
+    public static func clean(_ s: String) -> String {
+        s.replacingOccurrences(of: #"</?pasted_content\b[^>]*>"#, with: "", options: .regularExpression)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    public static func title(of text: String, maxLength: Int = 80) -> String {
+        let lines = clean(text).split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        var t = lines.first(where: { $0.hasPrefix("목표:") }).map { String($0.dropFirst("목표:".count)).trimmingCharacters(in: .whitespaces) }
+            ?? lines.first ?? ""
+        if t.count > maxLength { t = String(t.prefix(maxLength)) + "…" }
+        return t
     }
 
     public static func projectName(cwd: String) -> String {

@@ -32,7 +32,7 @@ struct PromptLogView: View {
                 TableColumn("시각") { e in Text(e.time.formatted(date: .numeric, time: .shortened)).monospacedDigit() }.width(130)
                 TableColumn("프로젝트") { e in Text(e.project).lineLimit(1) }.width(120)
                 TableColumn("") { e in Text(e.isFirst ? "★" : "").help(e.isFirst ? "세션의 최초 프롬프트" : "") }.width(18)
-                TableColumn("내용") { e in Text(e.text.replacingOccurrences(of: "\n", with: " ")).lineLimit(1) }
+                TableColumn("제목") { e in Text(e.title).lineLimit(1) }
                 TableColumn("경유") { e in Text(e.viaLauncher ? "JARVIS" : "").foregroundStyle(.secondary) }.width(56)
             }
             .frame(minHeight: 200)

@@ -1,4 +1,5 @@
 import Foundation
+import SQLite3
 import Testing
 @testable import JARVISCore
 
@@ -519,5 +520,48 @@ struct PromptLogTests {
         #expect(md.contains("· JARVIS"))
         #expect(md.contains("````\n두 번째 ```code```\n````"))
         #expect(md.contains("<details><summary>받아쓴 원문</summary>\n\n두 번째라고 말함"))
+    }
+}
+
+@Suite("프롬프트 기록: 감싸개 태그·제목 (B24)")
+struct PromptLogCleanTests {
+    @Test("<pasted_content> 태그를 벗겨 저장하고, 런처 전송과 짝지어진다")
+    func stripAndPair() throws {
+        let dir = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("jl-promptlog-\(UUID().uuidString)")
+        let log = try PromptLog(url: dir.appendingPathComponent("p.sqlite"))
+        let sent = "목표: 기록 창 추가\n\n할 일\n1. 아이콘 추가하기"
+        let t0 = Date(timeIntervalSince1970: 1_800_000_000)
+        try log.recordLauncherSend(text: sent, transcript: "기록 창 넣어 줘", project: "jl", skill: nil, outcome: "delivered", at: t0)
+        try log.record(prompt: "<pasted_content id=\"3f0e\">\n\(sent)\n</pasted_content id=\"3f0e\">", sessionId: "s", cwd: "/x/jl", at: t0 + 1)
+        let e = try #require(try log.entries().first)
+        #expect(e.text == sent)
+        #expect(e.viaLauncher && e.transcript == "기록 창 넣어 줘")
+        #expect(e.title == "기록 창 추가")
+    }
+
+    @Test("제목: '목표:' 줄 우선, 없으면 첫 줄, 길면 말줄임")
+    func title() {
+        #expect(PromptLog.title(of: "<pasted_content id=\"a\">\n목표: 런처 정리\n배경: …") == "런처 정리")
+        #expect(PromptLog.title(of: "\n  계속  \n") == "계속")
+        #expect(PromptLog.title(of: String(repeating: "가", count: 100), maxLength: 10) == String(repeating: "가", count: 10) + "…")
+    }
+}
+
+@Suite("프롬프트 기록: 예전 행 정리 (B24)")
+struct PromptLogMigrationTests {
+    @Test("태그째 저장된 예전 행은 DB를 열 때 정리된다")
+    func migrate() throws {
+        let url = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("jl-mig-\(UUID().uuidString)/p.sqlite")
+        do {
+            let log = try PromptLog(url: url)
+            try log.record(prompt: "임시", sessionId: "s", cwd: "/x/a")
+        }
+        // 예전 형식 행을 직접 넣는다
+        var db: OpaquePointer?
+        sqlite3_open(url.path, &db)
+        sqlite3_exec(db, "INSERT INTO prompts(ts,session_id,cwd,project,text,text_sha) VALUES(1,'s','/x/a','a','<pasted_content id=\"z\">\n목표: 예전 행\n</pasted_content id=\"z\">','old')", nil, nil, nil)
+        sqlite3_close(db)
+        let reopened = try PromptLog(url: url)
+        #expect(try reopened.entries().contains { $0.text == "목표: 예전 행" })
     }
 }

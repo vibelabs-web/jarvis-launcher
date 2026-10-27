@@ -122,7 +122,7 @@ struct HistoryRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
-            Text(entry.text.replacingOccurrences(of: "\n", with: " ")).font(.callout).lineLimit(1)
+            Text(entry.title).font(.callout).lineLimit(1)
             HStack(spacing: 4) {
                 if entry.isFirst { Text("★").foregroundStyle(.orange) }
                 Text(entry.project)
