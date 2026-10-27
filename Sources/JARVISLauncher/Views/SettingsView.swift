@@ -154,6 +154,8 @@ struct ModelSettings: View {
                     .disabled(!model.prefs.useLLM)
                 TextField("llama-server 경로", text: pref(\.llamaServerPath))
                 TextField("GGUF 모델 경로", text: pref(\.llmModelPath))
+                Text(model.llmPaths == nil ? "로컬 모델을 찾지 못했습니다 — scripts/fetch-models.sh q4로 받거나 경로를 입력하세요" : "로컬 모델 사용 가능 (비워 두면 프로젝트의 .local-models를 씁니다)")
+                    .font(.caption).foregroundStyle(model.llmPaths == nil ? .orange : .secondary)
                 HStack {
                     Button("로컬 테스트") { testLLM() }
                     if let llmCheck { Text(llmCheck).font(.caption).lineLimit(2) }

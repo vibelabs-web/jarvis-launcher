@@ -143,12 +143,35 @@ final class AppModel: ObservableObject {
     }
 
     var llm: LocalLLM? {
-        let server = (prefs.llamaServerPath as NSString).expandingTildeInPath
-        let model = (prefs.llmModelPath as NSString).expandingTildeInPath
-        guard prefs.useLLM, FileManager.default.isExecutableFile(atPath: server), FileManager.default.fileExists(atPath: model) else { return nil }
+        guard prefs.useLLM, let (server, model) = llmPaths else { return nil }
         if let e = llmEngine, e.serverPath == server, e.modelPath == model { return e }
-        llmEngine = LlamaServerLLM(serverPath: prefs.llamaServerPath, modelPath: prefs.llmModelPath)
+        llmEngine = LlamaServerLLM(serverPath: server, modelPath: model)
         return llmEngine
+    }
+
+    /// 설정에 경로가 있으면 그것을, 비어 있으면 `scripts/fetch-models.sh`가 받아 두는 프로젝트의 `.local-models`를 쓴다.
+    /// (설정이 비어 있어 앱이 모델을 못 찾고 업무 정리·LLM 추천을 조용히 건너뛰던 결함, B20)
+    var llmPaths: (server: String, model: String)? {
+        let fm = FileManager.default
+        var server = (prefs.llamaServerPath as NSString).expandingTildeInPath
+        var model = (prefs.llmModelPath as NSString).expandingTildeInPath
+        if server.isEmpty || model.isEmpty {
+            // 개발 실행: build/JARVISLauncher.app 의 두 단계 위가 프로젝트 폴더. 데이터 폴더(.local-data)의 위도 본다.
+            let roots = [Bundle.main.bundleURL.deletingLastPathComponent().deletingLastPathComponent(),
+                         stores.directory.deletingLastPathComponent()]
+            for root in roots {
+                let dir = root.appendingPathComponent(".local-models")
+                let s = dir.appendingPathComponent("llama-b11606/llama-b11606/llama-server").path
+                let m = dir.appendingPathComponent("Qwen3-1.7B-Q4_K_M.gguf").path
+                if fm.isExecutableFile(atPath: s), fm.fileExists(atPath: m) {
+                    if server.isEmpty { server = s }
+                    if model.isEmpty { model = m }
+                    break
+                }
+            }
+        }
+        guard fm.isExecutableFile(atPath: server), fm.fileExists(atPath: model) else { return nil }
+        return (server, model)
     }
 
     var recognizer: WhisperCLIRecognizer { WhisperCLIRecognizer(cliPath: prefs.whisperCLIPath, modelPath: prefs.whisperModelPath) }
@@ -746,6 +769,7 @@ final class AppModel: ObservableObject {
     private func structureDictation(_ transcript: String) async {
         lastDictation = nil
         guard let engine = llm else {
+            Diagnostics.log("dictation.structure skipped reason=\(prefs.useLLM ? "model-not-found" : "llm-off")")
             setStatus("받아쓴 그대로 넣었습니다(로컬 모델이 꺼져 있어 업무 정리는 하지 않음)", .info, autoClear: 6)
             return
         }

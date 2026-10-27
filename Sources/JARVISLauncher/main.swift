@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.$menuStatus.sink { [weak self] _ in self?.updateStatusIcon() }.store(in: &bag)
         Task { await model.refreshOrca() }
         Diagnostics.log("app.launched dataDir=\(model.stores.directory.path)")
+        Diagnostics.log("llm.available=\(model.llmPaths != nil) useLLM=\(model.prefs.useLLM) structureDictation=\(model.prefs.structureDictation)")
         // 지난 실행에서 지우지 못한 임시 녹음 파일은 시작할 때 지운다(음성 미보관, PRD 5.3 · B18)
         let audioDir = model.stores.directory.appendingPathComponent("tmp-audio", isDirectory: true)
         let leftovers = (try? FileManager.default.contentsOfDirectory(at: audioDir, includingPropertiesForKeys: nil)) ?? []
