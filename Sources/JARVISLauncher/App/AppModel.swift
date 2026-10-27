@@ -660,13 +660,22 @@ final class AppModel: ObservableObject {
         if phase == .recording { stopRecordingAndTranscribe() } else { startRecording() }
     }
 
+    /// 권한 대화상자가 떠 있는 동안 버튼을 또 눌러도 녹음이 겹쳐 시작되지 않게 막는다(B18)
+    private var micStarting = false
+
     func startRecording() {
-        guard phase == .compose else { return }
+        guard phase == .compose, !micStarting, recorder == nil else { return }
         if let e = recognizer.check() { setStatus(e.localizedDescription + " — 텍스트로 입력할 수 있습니다", .warn); return }
+        micStarting = true
+        let before = MicRecorder.permissionLabel
+        if before == "아직 묻지 않음" {
+            setStatus("마이크 권한 창에서 '허용'을 눌러 주세요. 창이 안 보이면 다른 창 뒤에 있을 수 있습니다", .info)
+        }
         Task {
-            let before = MicRecorder.permissionLabel
+            defer { micStarting = false }
             let granted = await MicRecorder.requestPermission()
             Diagnostics.log("mic.permission before=\(before) granted=\(granted)")
+            guard phase == .compose, recorder == nil else { return }
             guard granted else {
                 setStatus("마이크 권한이 없어 받아쓰기를 할 수 없습니다. 시스템 설정 > 개인정보 보호 > 마이크에서 허용할 수 있고, 텍스트 입력은 그대로 쓸 수 있습니다", .warn)
                 return
@@ -677,7 +686,7 @@ final class AppModel: ObservableObject {
                 recorder = r
                 phase = .recording
                 statusLabel = "녹음 중"
-                status = nil
+                if status?.kind == .info { status = nil }
                 Diagnostics.log("mic.recording started")
             } catch {
                 setStatus("녹음을 시작하지 못했습니다: \(error.localizedDescription)", .error)

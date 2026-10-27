@@ -28,6 +28,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         model.$menuStatus.sink { [weak self] _ in self?.updateStatusIcon() }.store(in: &bag)
         Task { await model.refreshOrca() }
         Diagnostics.log("app.launched dataDir=\(model.stores.directory.path)")
+        // 지난 실행에서 지우지 못한 임시 녹음 파일은 시작할 때 지운다(음성 미보관, PRD 5.3 · B18)
+        let audioDir = model.stores.directory.appendingPathComponent("tmp-audio", isDirectory: true)
+        let leftovers = (try? FileManager.default.contentsOfDirectory(at: audioDir, includingPropertiesForKeys: nil)) ?? []
+        for f in leftovers where f.pathExtension == "wav" { try? FileManager.default.removeItem(at: f) }
+        if !leftovers.isEmpty { Diagnostics.log("audio.cleanup removed=\(leftovers.count)") }
 
         // 자동 검증 훅(개발용, JARVIS_DEV_HOOKS=1일 때만): 패널 토글을 스크립트로 반복 재현(AC-01)
         if ProcessInfo.processInfo.environment["JARVIS_DEV_HOOKS"] == "1" {
