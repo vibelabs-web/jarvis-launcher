@@ -1,0 +1,3 @@
+# 기동 중 화면 상태 변화 (0.3s 간격): prompt=❯ 줄 존재, plan='plan mode on' 줄 존재, dialog=대화상자 문구
+  0.2s prompt=False plan=False dialog=False
+  2.0s prompt=True plan=True dialog=False

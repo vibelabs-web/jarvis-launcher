@@ -15,6 +15,8 @@ let package = Package(
         .executableTarget(name: "JARVISLauncher", dependencies: ["JARVISCore"]),
         // 실제 Orca 대상 E2E(화면 없음). 자신이 만든 테스트 터미널에만 보낸다: `swift run JARVISE2E`
         .executableTarget(name: "JARVISE2E", dependencies: ["JARVISCore"]),
+        // 받아쓰기 예비 벤치마크(앱과 같은 WhisperCLIRecognizer 경로): `swift run JARVISBench`
+        .executableTarget(name: "JARVISBench", dependencies: ["JARVISCore"]),
         // Xcode가 없으면 xctest 러너가 없어 `swift test`가 테스트를 실행하지 않는다(CLT 한계, ADR-3).
         // 그래서 Swift Testing 진입점을 직접 부르는 실행 타깃으로 돌린다: `swift run JARVISCoreTestRunner`
         .executableTarget(

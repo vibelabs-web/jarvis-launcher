@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>받아쓰기 예비 벤치마크 (2026-10-27T10:40:53Z)</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">받아쓰기 예비 벤치마크 (2026-10-27T10:40:53Z)</div><div class="sub">model-benchmarks.md</div><a class="lvl1" href="#받아쓰기-예비-벤치마크-2026-10-27t104053z">받아쓰기 예비 벤치마크 (2026-10-27T10:40:53Z)</a><a class="lvl2" href="#ggml-smallbin">ggml-small.bin</a><a class="lvl2" href="#ggml-large-v3-turbobin">ggml-large-v3-turbo.bin</a><a class="lvl2" href="#해석-메모-수동-기록">해석 메모 (수동 기록)</a></nav>
+<main><h1 id="받아쓰기-예비-벤치마크-2026-10-27t104053z">받아쓰기 예비 벤치마크 (2026-10-27T10:40:53Z)</h1>
+<ul><li><strong>예비 측정</strong>: 음성은 macOS TTS(Yuna, ko_KR)로 만든 12문장. 작가님 실제 음성 40문장 측정(AC-05)을 대신하지 않는다.</li><li>경로: 앱과 같은 <code>WhisperCLIRecognizer</code>(<code>whisper-cli -l ko -nt -np</code>). 1회 호출마다 모델을 새로 읽으므로 지연에 모델 로드가 포함된다.</li><li>CER: 공백·문장부호를 뺀 글자 편집 거리 ÷ 정답 글자 수. RTF = 전사 시간 ÷ 음성 길이.</li></ul>
+<h2 id="ggml-smallbin">ggml-small.bin</h2>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>분류</th><th>정답</th><th>전사</th><th>CER</th><th>지연(초)</th><th>RTF</th></tr></thead><tbody><tr><td>1</td><td>일반</td><td>지난번에 만들던 대시보드 다시 열어 줘</td><td>지난번에 만들던 데시보드 다시 열어줘</td><td>0.06</td><td>1.14</td><td>0.36</td></tr><tr><td>2</td><td>일반</td><td>오늘 회의 내용을 정리해서 요약해 줘</td><td>오늘 회의 내용을 정리해서 요약해줘.</td><td>0.00</td><td>1.10</td><td>0.42</td></tr><tr><td>3</td><td>일반</td><td>새로운 독서 메모 앱을 만들어 보자</td><td>새로운 독서 메모 앱을 만들어 보자.</td><td>0.00</td><td>1.09</td><td>0.43</td></tr><tr><td>4</td><td>일반</td><td>로그인 기능은 아직 만들지 마</td><td>로그인 기능은 아직 만들지 마.</td><td>0.00</td><td>0.58</td><td>0.27</td></tr><tr><td>5</td><td>개발용어</td><td>매출 그래프의 날짜 필터 버그 고쳐 줘</td><td>매출 그래프의 날짜 필터 버그 고쳐줘.</td><td>0.00</td><td>1.09</td><td>0.37</td></tr><tr><td>6</td><td>개발용어</td><td>리액트 컴포넌트를 타입스크립트로 바꿔 줘</td><td>리액트 컴포넌트를 타입 스크립트로 바꿔줘.</td><td>0.00</td><td>1.11</td><td>0.35</td></tr><tr><td>7</td><td>개발용어</td><td>API 응답이 느리면 캐시를 추가해 줘</td><td>api 응답이 느리면 캐시를 추가해줘</td><td>0.00</td><td>1.11</td><td>0.36</td></tr><tr><td>8</td><td>개발용어</td><td>깃허브 풀 리퀘스트 리뷰 코멘트 반영해 줘</td><td>GitHub full request review 코멘트 반영해줘.</td><td>1.35</td><td>1.09</td><td>0.36</td></tr><tr><td>9</td><td>경로·명령</td><td>src 폴더의 main 파일을 열어 줘</td><td>src 폴더의 메인 파일을 열어줘.</td><td>0.25</td><td>1.14</td><td>0.43</td></tr><tr><td>10</td><td>경로·명령</td><td>npm test 를 실행하고 결과 알려 줘</td><td>NPM 테스트를 실행하고 결과 알려줘.</td><td>0.24</td><td>1.11</td><td>0.36</td></tr><tr><td>11</td><td>경로·명령</td><td>포트 3000 번 서버를 재시작해 줘</td><td>포트 3000번 서버를 제시작해줘</td><td>0.07</td><td>1.11</td><td>0.42</td></tr><tr><td>12</td><td>경로·명령</td><td>버전 2.1 로 올리고 체인지로그 써 줘</td><td>버전 2.1로 올리고 체인지 로그 써줘.</td><td>0.00</td><td>1.10</td><td>0.37</td></tr></tbody></table></div>
+<p><strong>평균 CER 0.164 · 지연 P50 1.10s / P95 1.14s · 평균 RTF 0.38</strong> (n=12)</p>
+<ul><li>일반 평균 CER 0.016</li><li>개발용어 평균 CER 0.338</li><li>경로·명령 평균 CER 0.138</li></ul>
+<h2 id="ggml-large-v3-turbobin">ggml-large-v3-turbo.bin</h2>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>분류</th><th>정답</th><th>전사</th><th>CER</th><th>지연(초)</th><th>RTF</th></tr></thead><tbody><tr><td>1</td><td>일반</td><td>지난번에 만들던 대시보드 다시 열어 줘</td><td>지난번에 만들던 대시보드 다시 열어줘.</td><td>0.00</td><td>2.11</td><td>0.66</td></tr><tr><td>2</td><td>일반</td><td>오늘 회의 내용을 정리해서 요약해 줘</td><td>오늘 회의 내용을 정리해서 요약해 줘.</td><td>0.00</td><td>1.59</td><td>0.61</td></tr><tr><td>3</td><td>일반</td><td>새로운 독서 메모 앱을 만들어 보자</td><td>새로운 독서 메모 앱을 만들어 보자.</td><td>0.00</td><td>1.64</td><td>0.64</td></tr><tr><td>4</td><td>일반</td><td>로그인 기능은 아직 만들지 마</td><td>로그인 기능은 아직 만들지 마.</td><td>0.00</td><td>2.11</td><td>0.98</td></tr><tr><td>5</td><td>개발용어</td><td>매출 그래프의 날짜 필터 버그 고쳐 줘</td><td>매출 그래프의 날짜 필터 버그 고쳐줘.</td><td>0.00</td><td>2.12</td><td>0.73</td></tr><tr><td>6</td><td>개발용어</td><td>리액트 컴포넌트를 타입스크립트로 바꿔 줘</td><td>Reet 컴포넌트를 TypeScript로 바꿔줘.</td><td>0.78</td><td>1.60</td><td>0.50</td></tr><tr><td>7</td><td>개발용어</td><td>API 응답이 느리면 캐시를 추가해 줘</td><td>API 응답이 느리면 캐시를 추가해줘.</td><td>0.00</td><td>1.60</td><td>0.53</td></tr><tr><td>8</td><td>개발용어</td><td>깃허브 풀 리퀘스트 리뷰 코멘트 반영해 줘</td><td>기터브 풀 리퀘스트 리뷰 코멘트 반영해줘.</td><td>0.12</td><td>2.12</td><td>0.70</td></tr><tr><td>9</td><td>경로·명령</td><td>src 폴더의 main 파일을 열어 줘</td><td>src 폴더의 메인 파일을 열어줘.</td><td>0.25</td><td>1.61</td><td>0.61</td></tr><tr><td>10</td><td>경로·명령</td><td>npm test 를 실행하고 결과 알려 줘</td><td>npm 테스트를 실행하고 결과 알려줘.</td><td>0.24</td><td>2.11</td><td>0.68</td></tr><tr><td>11</td><td>경로·명령</td><td>포트 3000 번 서버를 재시작해 줘</td><td>포트 3000번 서버를 재시작해줘.</td><td>0.00</td><td>1.61</td><td>0.61</td></tr><tr><td>12</td><td>경로·명령</td><td>버전 2.1 로 올리고 체인지로그 써 줘</td><td>버전 2.1로 올리고 체인지로그 써줘.</td><td>0.00</td><td>1.60</td><td>0.54</td></tr></tbody></table></div>
+<p><strong>평균 CER 0.115 · 지연 P50 1.61s / P95 2.12s · 평균 RTF 0.65</strong> (n=12)</p>
+<ul><li>일반 평균 CER 0.000</li><li>개발용어 평균 CER 0.224</li><li>경로·명령 평균 CER 0.121</li></ul>
+<h2 id="해석-메모-수동-기록">해석 메모 (수동 기록)</h2>
+<ul><li>CER은 표기 문자만 다른 경우도 오류로 센다. 예: small #8 <code>GitHub full request review</code>(정답 '깃허브 풀 리퀘스트 리뷰'), large #6 <code>TypeScript</code>(정답 '타입스크립트'). 의미 판단은 사람이 해야 하며, 개발 용어 정확도 지표는 작가님 실제 음성 셋에서 따로 정의한다.</li><li>의미가 틀린 오인식: small #8 'full request'(pull), large #6 'Reet'(리액트), small #11 '제시작'(재시작), small #1 '데시보드'.</li><li>지연은 호출마다 모델을 다시 읽는 비용을 포함한다. 더 줄이려면 <code>whisper-server</code>(설치되어 있음)를 상주시키는 방법이 있다. 아직 구현하지 않았다.</li><li>결론(예비): 한국어 일반 문장은 두 모델 모두 양호하다. large-v3-turbo가 오인식이 적은 대신 지연이 약 1.5배다. 기본값을 small로 둘지 turbo로 바꿀지는 작가님 실제 음성 측정(AC-05) 뒤에 정한다.</li></ul>
+<div class="meta-foot">원본: <code>model-benchmarks.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

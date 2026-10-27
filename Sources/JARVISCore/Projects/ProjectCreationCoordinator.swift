@@ -65,6 +65,8 @@ public struct ProjectCreationCoordinator: Sendable {
     public let dispatcher: DispatchCoordinator
     public var readyTimeout: TimeInterval = 60
     public var pollInterval: TimeInterval = 1.5
+    /// '준비됐지만 플랜 모드 줄 없음'을 몇 번 연속 봐야 멈출지
+    public var planConfirmReads = 4
     public var sleep: @Sendable (TimeInterval) async -> Void = { try? await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) }
 
     public init(orca: OrcaAdapter, dispatcher: DispatchCoordinator) {
@@ -149,12 +151,18 @@ public struct ProjectCreationCoordinator: Sendable {
         if !cp.planModeVerified {
             let deadline = Date().addingTimeInterval(readyTimeout)
             var lastState: ScreenState = .unknown
+            // 프롬프트 줄이 하단 상태줄보다 먼저 그려질 수 있으므로, '준비됐지만 플랜 모드 줄 없음'은
+            // 몇 번 더 읽어 본 뒤에 판정한다(1회 관찰된 사례, docs/dev-bug-log.md B7).
+            var readyWithoutPlan = 0
             while true {
                 let lines = (try? await orca.readScreen(handle: handle)) ?? []
                 lastState = ScreenClassifier.classify(lines)
                 if case .ready(let plan, _) = lastState {
                     if plan { break }
-                    return stop(.claudeReady, "Claude는 떴지만 플랜 모드가 확인되지 않았습니다. 전송하지 않았습니다")
+                    readyWithoutPlan += 1
+                    if readyWithoutPlan >= planConfirmReads {
+                        return stop(.claudeReady, "Claude는 떴지만 플랜 모드가 확인되지 않았습니다. 전송하지 않았습니다")
+                    }
                 }
                 if case .dialog(let d) = lastState {
                     return stop(.claudeReady, "Claude가 확인을 기다리고 있습니다: \(d). Orca에서 직접 처리한 뒤 이어하기를 눌러 주세요")

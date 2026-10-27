@@ -201,6 +201,16 @@ struct ProjectCreationTests {
         #expect(o.sendCount == 0)
     }
 
+    @Test("상태줄이 늦게 그려져도(준비→플랜 줄 등장) 멈추지 않고 1회 전송 (B7)")
+    func lateFooter() async {
+        let o = FakeOrca()
+        o.screenSequence["term_new1"] = [Fixture.lines("screen-normal-ready.txt"), Fixture.lines("screen-normal-ready.txt"),
+                                         Fixture.lines("screen-plan-ready.txt")]
+        let (_, r) = await coordinator(o).run(CreationCheckpoint(parent: TestDirs.fresh("late").path, name: "app-late"), prompt: "p")
+        guard case .completed = r else { Issue.record("\(r)"); return }
+        #expect(o.sendCount == 1)
+    }
+
     @Test("전송 결과가 불명이면 이어하기로도 재전송하지 않는다")
     func unknownNoResend() async {
         let o = FakeOrca()

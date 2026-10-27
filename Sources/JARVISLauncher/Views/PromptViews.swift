@@ -36,9 +36,9 @@ struct PromptRootView: View {
             Text(model.statusLabel).font(.caption).foregroundStyle(.secondary)
             Spacer()
             Button { model.onOpenSettings?() } label: { Image(systemName: "gearshape") }
-                .buttonStyle(.borderless).help("설정")
+                .buttonStyle(.borderless).help("설정").accessibilityLabel("설정")
             Button { model.escape() } label: { Image(systemName: "xmark") }
-                .buttonStyle(.borderless).help("닫기 (Esc)")
+                .buttonStyle(.borderless).help("닫기 (Esc)").accessibilityLabel("닫기")
         }
     }
 }
@@ -84,6 +84,7 @@ struct ComposeView: View {
                           systemImage: model.phase == .recording ? "stop.circle.fill" : "mic")
                 }
                 .tint(model.phase == .recording ? .red : nil)
+                .accessibilityLabel(model.phase == .recording ? "녹음 중지" : "받아쓰기")
                 .disabled(busy)
                 Button("기존 프로젝트") { routeTo(.existingProject) }.disabled(!model.session.canProceed || busy)
                 Button("새 프로젝트") { routeTo(.newProject) }.disabled(!model.session.canProceed || busy)
