@@ -64,6 +64,12 @@ public struct Preferences: Codable, Equatable, Sendable {
     public var structureDictation: Bool = true
     /// 정리 엔진: "claude"(claude -p, Haiku 5.5 — 받아쓴 말이 외부로 전송됨) | "local"(로컬 모델)
     public var structureEngine: String = "claude"
+    /// 창 투명도(1 = 불투명). 패널과 전체 보기 창을 따로 둔다
+    public var panelOpacity: Double = 1.0
+    public var fullViewOpacity: Double = 0.85
+    /// 항상 위에 표시(탑모스트)
+    public var panelPinned: Bool = true
+    public var fullViewPinned: Bool = true
 
     public init() {}
 
@@ -83,6 +89,10 @@ public struct Preferences: Codable, Equatable, Sendable {
         p.lastProjectID = try? c.decode(UUID.self, forKey: .lastProjectID)
         p.structureDictation = (try? c.decode(Bool.self, forKey: .structureDictation)) ?? p.structureDictation
         p.structureEngine = (try? c.decode(String.self, forKey: .structureEngine)) ?? p.structureEngine
+        p.panelOpacity = (try? c.decode(Double.self, forKey: .panelOpacity)) ?? p.panelOpacity
+        p.fullViewOpacity = (try? c.decode(Double.self, forKey: .fullViewOpacity)) ?? p.fullViewOpacity
+        p.panelPinned = (try? c.decode(Bool.self, forKey: .panelPinned)) ?? p.panelPinned
+        p.fullViewPinned = (try? c.decode(Bool.self, forKey: .fullViewPinned)) ?? p.fullViewPinned
         self = p
     }
 }

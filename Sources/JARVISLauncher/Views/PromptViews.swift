@@ -60,6 +60,8 @@ struct PromptRootView: View {
             StatusDot(status: model.menuStatus)
             Text(model.statusLabel).font(.caption).foregroundStyle(.secondary)
             Spacer()
+            WindowControls(opacity: model.prefs.panelOpacity, pinned: model.prefs.panelPinned,
+                           setOpacity: model.setPanelOpacity, setPinned: model.setPanelPinned)
             Button { model.onOpenSettings?() } label: { Image(systemName: "gearshape") }
                 .buttonStyle(.borderless).help("설정").accessibilityLabel("설정")
             Button { model.escape() } label: { Image(systemName: "xmark") }

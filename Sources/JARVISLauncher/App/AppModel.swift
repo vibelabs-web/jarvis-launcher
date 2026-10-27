@@ -142,7 +142,7 @@ final class AppModel: ObservableObject {
     }
 
     var panelHeight: CGFloat {
-        var h: CGFloat = 214
+        var h: CGFloat = 188
         if targetSummary != nil { h += 20 }
         if let s = status { h += s.canRetry || s.confirmInferredSkill || s.canRevertDictation ? 34 : 24 }
         if listKind != nil { h += min(CGFloat(max(listItems.count, 1)), 6) * 40 + 30 }
@@ -198,6 +198,13 @@ final class AppModel: ObservableObject {
     }
 
     var recognizer: WhisperCLIRecognizer { WhisperCLIRecognizer(cliPath: prefs.whisperCLIPath, modelPath: prefs.whisperModelPath) }
+
+    // MARK: 창 투명도·항상 위 (PanelController가 prefs 변화를 보고 반영)
+
+    func setPanelOpacity(_ v: Double) { prefs.panelOpacity = v; savePrefs(); Diagnostics.log("window.opacity panel=\(Int(v * 100))") }
+    func setFullViewOpacity(_ v: Double) { prefs.fullViewOpacity = v; savePrefs(); Diagnostics.log("window.opacity fullview=\(Int(v * 100))") }
+    func setPanelPinned(_ on: Bool) { prefs.panelPinned = on; savePrefs(); Diagnostics.log("window.pinned panel=\(on)") }
+    func setFullViewPinned(_ on: Bool) { prefs.fullViewPinned = on; savePrefs(); Diagnostics.log("window.pinned fullview=\(on)") }
 
     func savePrefs() {
         try? stores.preferences.save(prefs)
