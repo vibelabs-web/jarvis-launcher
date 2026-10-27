@@ -9,8 +9,7 @@ struct PromptRootView: View {
         VStack(alignment: .leading, spacing: 8) {
             header
             PromptTextView(model: model)
-                .frame(minHeight: model.inputExpanded ? AppModel.expandedInputHeight : 96,
-                       maxHeight: model.inputExpanded ? AppModel.expandedInputHeight : AppModel.inputHeight)
+                .frame(height: model.inputExpanded ? AppModel.expandedInputHeight : AppModel.inputHeight)
                 .padding(6)
                 .background(RoundedRectangle(cornerRadius: 12).fill(Color(nsColor: .textBackgroundColor).opacity(0.5)))
                 .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.secondary.opacity(0.25)))
@@ -33,7 +32,8 @@ struct PromptRootView: View {
         .padding(.top, 12)
         .padding(.bottom, 12)
         .frame(width: PanelController.width, alignment: .topLeading)
-        .frame(maxHeight: .infinity, alignment: .top)
+        // 높이는 내용이 정한다. 패널은 이 크기를 재서 맞춘다(B21: 고정 높이 안에서 내용이 늘면 머리줄이 눌렸다)
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// 입력창 오른쪽 위: 크게 보기(⌘E) · 전체 보기(⌘⇧E)
@@ -98,7 +98,7 @@ struct ChipBar: View {
             .help(model.phase == .recording ? "녹음 중지 — 받아 적기" : "받아쓰기(음성은 저장하지 않음)")
             .accessibilityLabel(model.phase == .recording ? "녹음 중지" : "받아쓰기")
             if model.phase == .recording { WaveformView(meter: model.meter) }
-            if model.phase == .transcribing { ProgressView().controlSize(.small); Text(model.statusLabel).font(.caption) }
+            if model.phase == .transcribing { ProgressView().controlSize(.small); Text(model.statusLabel).font(.caption).lineLimit(1).fixedSize() }
             Spacer(minLength: 8)
             skillChip
             sendButton
@@ -151,6 +151,7 @@ struct ChipBar: View {
             }
         }
         .buttonStyle(.borderedProminent)
+        .fixedSize()
         .disabled(!model.canSubmit)
         .accessibilityLabel(model.newProjectMode ? "새 프로젝트 다음 단계" : "보내기")
     }
@@ -171,7 +172,7 @@ struct Chip: View {
             Button(action: onTap) {
                 HStack(spacing: 5) {
                     Image(systemName: icon).font(.caption)
-                    Text(label).font(.callout).lineLimit(1)
+                    Text(label).font(.callout).lineLimit(1).truncationMode(.middle).frame(maxWidth: 170, alignment: .leading)
                     if let b = badge {
                         Text(b).font(.caption2.weight(.medium)).foregroundStyle(badgeColor)
                             .padding(.horizontal, 5).padding(.vertical, 1)
@@ -336,10 +337,12 @@ struct WaveformView: View {
             if let start = meter.startedAt {
                 TimelineView(.periodic(from: start, by: 1)) { ctx in
                     let s = Int(ctx.date.timeIntervalSince(start))
-                    Text(String(format: "%d:%02d", s / 60, s % 60)).font(.caption.monospacedDigit()).foregroundStyle(.red)
+                    Text(String(format: "%d:%02d", s / 60, s % 60)).font(.caption.monospacedDigit()).foregroundStyle(.red).fixedSize()
                 }
             }
-            if meter.silent { Text("소리가 들리지 않습니다").font(.caption2).foregroundStyle(.orange) }
+            if meter.silent {
+                Image(systemName: "speaker.slash").font(.caption).foregroundStyle(.orange).help("소리가 들리지 않습니다")
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(meter.silent ? "녹음 중, 소리가 들리지 않음" : "녹음 중")

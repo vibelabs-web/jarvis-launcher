@@ -25,6 +25,8 @@ final class PanelController {
     private var bag: Set<AnyCancellable> = []
     /// 프롬프트 전체 보기 창(⌘⇧E)
     private var fullWindow: NSWindow?
+    /// 패널 내용(SwiftUI). 높이는 손으로 계산하지 않고 이 뷰가 잰 크기에 맞춘다(B21)
+    private var host: NSView?
     static let width: CGFloat = 680
 
     init(model: AppModel) {
@@ -44,7 +46,9 @@ final class PanelController {
         panel.onCancel = { [weak model] in model?.escape() }
 
         // 반투명 배경. "투명도 줄이기" 설정이면 macOS가 자동으로 불투명하게 그린다(PRD 4.1).
-        panel.contentView = glassContent(PromptRootView(model: model))
+        var hostView: NSView?
+        panel.contentView = glassContent(PromptRootView(model: model)) { hostView = $0 }
+        host = hostView
         model.onRequestHide = { [weak self] in self?.hide() }
         model.onOpenFullView = { [weak self] in self?.openFullView() }
         model.onCloseFullView = { [weak self] in self?.closeFullView() }
@@ -54,7 +58,8 @@ final class PanelController {
             .sink { [weak self] _ in
                 guard let self else { return }
                 self.applyWindowPrefs()
-                if abs(self.panel.frame.height - self.model.panelHeight) > 1 { self.resize(height: self.model.panelHeight) }
+                // SwiftUI가 바뀐 내용을 그린 뒤에 잰다
+                DispatchQueue.main.async { self.fitToContent() }
             }
             .store(in: &bag)
     }
@@ -66,7 +71,7 @@ final class PanelController {
     func show() {
         let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
         guard let vf = screen?.visibleFrame else { return }
-        let frame = PanelGeometry.frame(contentSize: CGSize(width: Self.width, height: model.panelHeight), visibleFrame: vf)
+        let frame = PanelGeometry.frame(contentSize: CGSize(width: Self.width, height: contentHeight()), visibleFrame: vf)
         panel.setFrame(frame, display: true)
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
@@ -140,6 +145,19 @@ final class PanelController {
         panel.orderOut(nil)
         model.panelDidHide()
         Diagnostics.log("panel.hide")
+    }
+
+    /// SwiftUI 내용이 실제로 필요한 높이. 녹음 표시·결과 줄·목록이 늘어도 머리줄이 눌리지 않게 한다(B21)
+    private func contentHeight() -> CGFloat {
+        guard let host else { return model.panelHeight }
+        host.layoutSubtreeIfNeeded()
+        let h = host.fittingSize.height
+        return h > 50 ? ceil(h) : model.panelHeight
+    }
+
+    private func fitToContent() {
+        let h = contentHeight()
+        if abs(panel.frame.height - h) > 1 { resize(height: h) }
     }
 
     private func resize(height: CGFloat) {

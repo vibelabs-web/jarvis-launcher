@@ -38,9 +38,9 @@ struct WindowControls: View {
     }
 }
 
-/// 둥근 반투명 유리 배경(NSVisualEffectView) 위에 SwiftUI를 올린 내용 뷰
+/// 둥근 반투명 유리 배경(NSVisualEffectView) 위에 SwiftUI를 올린 내용 뷰. 크기를 재려면 `hostOut`으로 호스팅 뷰를 받는다.
 @MainActor
-func glassContent<V: View>(_ root: V, material: NSVisualEffectView.Material = .hudWindow) -> NSView {
+func glassContent<V: View>(_ root: V, material: NSVisualEffectView.Material = .hudWindow, hostOut: ((NSView) -> Void)? = nil) -> NSView {
     let blur = NSVisualEffectView()
     blur.material = material
     blur.blendingMode = .behindWindow
@@ -51,6 +51,7 @@ func glassContent<V: View>(_ root: V, material: NSVisualEffectView.Material = .h
     let host = NSHostingView(rootView: root)
     host.translatesAutoresizingMaskIntoConstraints = false
     blur.addSubview(host)
+    hostOut?(host)
     NSLayoutConstraint.activate([
         host.leadingAnchor.constraint(equalTo: blur.leadingAnchor),
         host.trailingAnchor.constraint(equalTo: blur.trailingAnchor),

@@ -124,7 +124,7 @@ final class AppModel: ObservableObject {
 
     var showNewProjectCard: Bool { newProjectMode && (meta != nil || composingMeta || creation != nil) }
 
-    static let inputHeight: CGFloat = 150
+    static let inputHeight: CGFloat = 120
     static let expandedInputHeight: CGFloat = 480
 
     func toggleExpanded() {
