@@ -1,0 +1,16 @@
+{
+  "id": "fixture",
+  "ok": true,
+  "result": {
+    "terminals": [
+      {"handle": "term_a1", "ptyId": "p1", "incarnationId": "inc-a1", "orphaned": false, "worktreeId": "repoA::/tmp/jl/alpha-app", "worktreePath": "/tmp/jl/alpha-app", "branch": "refs/heads/main", "tabId": "t1", "leafId": "l1", "title": "x", "connected": true, "writable": true, "lastOutputAt": 1793095489803, "executionHostId": "local", "agentIdentity": "claude"},
+      {"handle": "term_b1", "ptyId": "p2", "incarnationId": "inc-b1", "orphaned": false, "worktreeId": "repoB::/tmp/jl/sales-dashboard", "worktreePath": "/tmp/jl/sales-dashboard", "branch": "refs/heads/main", "tabId": "t2", "leafId": "l2", "connected": true, "writable": true, "executionHostId": "local", "agentIdentity": "claude"},
+      {"handle": "term_s1", "ptyId": "p3", "incarnationId": "inc-s1", "orphaned": true, "worktreeId": "repoB::/tmp/jl/sales-dashboard", "worktreePath": "/tmp/jl/sales-dashboard", "connected": true, "writable": true, "executionHostId": "local", "agentIdentity": null}
+    ],
+    "hostScope": {"hostIds": ["local"], "omittedHostIds": ["runtime:remote-1"], "omittedHostSelectors": [{"hostId": "runtime:remote-1", "selector": "--environment remote"}]},
+    "topologyRevisions": {"repoA::/tmp/jl/alpha-app": 3},
+    "totalCount": 3,
+    "truncated": false
+  },
+  "_meta": {"runtimeId": "rt"}
+}

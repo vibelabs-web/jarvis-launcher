@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>알려진 한계 (2026-10-27 기준)</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">알려진 한계 (2026-10-27 기준)</div><div class="sub">known-limitations.md</div><a class="lvl1" href="#알려진-한계-2026-10-27-기준">알려진 한계 (2026-10-27 기준)</a></nav>
+<main><h1 id="알려진-한계-2026-10-27-기준">알려진 한계 (2026-10-27 기준)</h1>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>한계</th><th>영향</th><th>대응 / 상태</th></tr></thead><tbody><tr><td>L1</td><td>Orca가 Claude <strong>세션 ID를 노출하지 않음</strong></td><td>같은 worktree에 Claude가 둘 이상이면 자동 매칭 불가</td><td>매번 수동 선택(실 Orca E2E에서 확인). JARVIS가 만든 세션의 UUID는 기록만 함</td></tr><tr><td>L2</td><td><code>tui-idle</code>이 대화상자 표시 중에도 충족됨</td><td>준비 상태 오판 가능</td><td>화면 텍스트로 대화상자를 판정(ADR-6). Claude Code 2.1.311 문구 기준 휴리스틱이라 버전이 바뀌면 다시 채취 필요</td></tr><tr><td>L3</td><td>새 Claude 세션 기동 시 MCP 승인 대화상자가 뜰 수 있음</td><td>새 프로젝트 흐름이 <code>Claude 플랜 모드 확인</code> 단계에서 멈춤</td><td>자동 응답하지 않음. Orca에서 처리한 뒤 '이어하기'. 실제 Orca에서 '이어하기'를 실행해 본 적은 없음(단위 테스트만 있음)</td></tr><tr><td>L4</td><td>Git 저장소 안 폴더를 <code>repo add</code>하면 상위 저장소로 해석됨</td><td>기본 상위 폴더가 Git 저장소 안이면 새 프로젝트가 상위 worktree에 묶임</td><td>기본 상위 폴더는 Git 밖에 두기를 권장. <strong>Git 밖 빈 폴더의 <code>kind: folder</code> 등록은 미검증</strong>(테스트 폴더를 프로젝트 밖에 만들 수 없음)</td></tr><tr><td>L5</td><td>ad-hoc 서명</td><td>재빌드하면 마이크 권한을 다시 물을 수 있음</td><td>개인 로컬 실행 전제. 공증 없음</td></tr><tr><td>L6</td><td>Xcode 없음 → <code>swift test</code> 미동작</td><td>테스트 실행 방식이 표준과 다름</td><td><code>swift run JARVISCoreTestRunner</code></td></tr><tr><td>L7</td><td>원격 호스트(ssh·paired server)</td><td>전송 대상에서 제외</td><td>목록에 미확인/원격으로 표시</td></tr><tr><td>L8</td><td>스킬 목록은 파일 스캔 + Orca 목록 기준</td><td>내장·계정 동기화 스킬은 빠질 수 있음. 플러그인 호출명은 추정</td><td>&quot;전체 목록 아님&quot;을 표시하고, 추정 스킬은 사용자 확인 후에만 전송</td></tr><tr><td>L9</td><td>로컬 LLM 미설치</td><td>분류는 규칙만, 메타 프롬프트는 템플릿만</td><td>모델 다운로드 승인 대기(<code>docs/model-download-plan.md</code>). LLM 기반 AC-05·06·11·24 측정 미수행</td></tr><tr><td>L10</td><td>패널 높이는 단계별 고정값</td><td>내용이 많으면 내부 스크롤</td><td>PRD의 '내용에 따른 높이'는 부분 구현</td></tr><tr><td>L11</td><td>검증 환경에서 <code>screencapture</code> 불가(화면 기록 권한 없음)</td><td>스크린샷 증거 없음</td><td>접근성 트리·진단 로그로 대체</td></tr><tr><td>L12</td><td>일부 아이콘 버튼의 접근성 이름이 비어 있음(접근성 트리에서 이름 없는 <code>button</code>)</td><td>VoiceOver 사용성 저하</td><td>개선 필요</td></tr></tbody></table></div>
+<div class="meta-foot">원본: <code>known-limitations.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

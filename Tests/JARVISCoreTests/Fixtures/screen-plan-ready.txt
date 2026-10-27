@@ -1,0 +1,8 @@
+ ▐▛███▛█   Claude Code v2.1.311
+▝▜██████▀  Opus 5.5 with medium effort · Claude Max
+ ▝▝   ▝▝   ~/x/qa/sandbox/jl-spike
+─────────────────────────────────────────────────── jl-spike ─
+❯ Try "how do I log an error?"
+───────────────────────────────────────────────────────────────
+  🤖 Opus 5.5 ⚡medium 💡 │ ✅ clean │ no env │ 🎨 default
+  ⏸ plan mode on (shift+tab to cycle) · ← for agents

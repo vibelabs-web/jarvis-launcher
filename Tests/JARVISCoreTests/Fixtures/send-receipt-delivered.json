@@ -1,0 +1,1 @@
+{"id":"d5","ok":true,"result":{"send":{"handle":"term_x","accepted":true,"bytesWritten":115,"prompt":{"requestId":"1629b18a","stages":["input_accepted","turn_started"],"provider":"claude","observation":"supported","processIncarnation":"be36ff1a","generation":2}},"mutation":{"requestId":"1629b18a","replayed":false}},"_meta":{"runtimeId":"rt"}}

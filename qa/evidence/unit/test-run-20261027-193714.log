@@ -1,0 +1,86 @@
+◇ Test run started.
+↳ Testing Library Version: 1902
+↳ Target Platform: arm64e-apple-macos14.0
+◇ Suite "AC-19·20 스킬" started.
+◇ Suite "AC-11·12 분류·프롬프트" started.
+◇ Suite "AC-07~10 세션 탐색·재연결" started.
+◇ Suite "AC-13~15 전송 안전" started.
+◇ Suite "AC-16·18 새 프로젝트" started.
+◇ Test "개인·프로젝트·레거시 각 1개를 출처와 함께 표시, 충돌은 차단 (AC-19·20)" started.
+◇ Test "새 프로젝트 표현은 new_project" started.
+◇ Suite "화면 판정" started.
+◇ Test "별칭이 명시되면 규칙으로 추천한다 (AC-11)" started.
+◇ Test "입력 세션: 뒤로 가기·받아쓰기 삽입에도 원문 유지 (AC-03)" started.
+◇ Test "LLM이 손상된 JSON을 내면 수동 선택으로 폴백 (AC-12)" started.
+◇ Test "모호하고 LLM이 없으면 수동 선택 (AC-11)" started.
+◇ Test "경로·호스트가 빠진 응답이 섞이면 자동 확정하지 않는다 (AC-10)" started.
+◇ Test "LLM 정상 추천은 후보 ID로만" started.
+◇ Test "LLM이 후보 밖 ID를 내면 버리고 수동 선택 (PRD 5.4)" started.
+◇ Test "실측 형태 JSON을 해석하고 원격 호스트 누락을 읽는다 (AC-07)" started.
+◇ Test "핸들이 바뀌면 새 핸들로 매칭하고, 구 핸들 기준 확인 화면은 전송이 막힌다 (AC-09)" started.
+◇ Test "메타 프롬프트는 원문을 그대로 보존하고, 손상된 출력은 템플릿 폴백 (AC-12)" started.
+◇ Test "패널은 화면 사용 영역 안에 들어간다 (AC-02)" started.
+◇ Test "터미널이 사라지면 오프라인, 원격 호스트 누락이면 미확인" started.
+◇ Test "저장한 프로젝트가 앱 재시작 후 같은 터미널에 다시 짝지어진다 (AC-08)" started.
+◇ Test "같은 폴더에 Claude 2개면 자동 확정하지 않는다 (AC-10)" started.
+◇ Test "전송 결과가 불명이면 이어하기로도 재전송하지 않는다" started.
+◇ Test "대화상자가 떠 있으면 전송 0회" started.
+◇ Test "대화상자가 뜨면 멈추고 보내지 않는다, 처리 후 이어하면 같은 터미널로 1회 전송 (AC-17·18)" started.
+◇ Test "확인 뒤 대상 폴더가 바뀌면 전송 0회 (AC-13)" started.
+◇ Test "플랜 모드가 확인되지 않으면 보내지 않는다 (AC-17)" started.
+◇ Test "중복 클릭은 1회만 처리 (AC-14)" started.
+◇ Test "실측 receipt JSON을 해석한다" started.
+◇ Test "기존 폴더·상위 탈출·symlink·권한 없음·잘못된 이름은 중단 (AC-16)" started.
+◇ Test "셸 인용" started.
+◇ Test "정상이면 정확히 1회 전송하고 '터미널에 전달됨' (AC-14)" started.
+◇ Test "send 응답 시간 초과는 '상태 불명'이고 재전송하지 않는다 (AC-15)" started.
+◇ Test "확인 뒤 호스트가 바뀌면 전송 0회 (AC-13)" started.
+◇ Test "Orca 단계 실패 후 이어하기: 폴더 재사용, 터미널·전송 중복 없음 (AC-18)" started.
+◇ Test normalReady() started.
+◇ Test "입력 수락만 관찰되면 '상태 불명'" started.
+◇ Test mcpDialog() started.
+◇ Test planReady() started.
+◇ Test empty() started.
+◇ Test shell() started.
+✔ Test "모호하고 LLM이 없으면 수동 선택 (AC-11)" passed after 0.005 seconds.
+✔ Test "새 프로젝트 표현은 new_project" passed after 0.005 seconds.
+✔ Test "별칭이 명시되면 규칙으로 추천한다 (AC-11)" passed after 0.006 seconds.
+✔ Test "패널은 화면 사용 영역 안에 들어간다 (AC-02)" passed after 0.006 seconds.
+✔ Test "입력 세션: 뒤로 가기·받아쓰기 삽입에도 원문 유지 (AC-03)" passed after 0.006 seconds.
+✔ Test "개인·프로젝트·레거시 각 1개를 출처와 함께 표시, 충돌은 차단 (AC-19·20)" passed after 0.007 seconds.
+✔ Test "LLM이 손상된 JSON을 내면 수동 선택으로 폴백 (AC-12)" passed after 0.007 seconds.
+✔ Test "LLM 정상 추천은 후보 ID로만" passed after 0.007 seconds.
+✔ Test "LLM이 후보 밖 ID를 내면 버리고 수동 선택 (PRD 5.4)" passed after 0.007 seconds.
+✔ Test "경로·호스트가 빠진 응답이 섞이면 자동 확정하지 않는다 (AC-10)" passed after 0.007 seconds.
+✔ Test "메타 프롬프트는 원문을 그대로 보존하고, 손상된 출력은 템플릿 폴백 (AC-12)" passed after 0.007 seconds.
+✔ Test "터미널이 사라지면 오프라인, 원격 호스트 누락이면 미확인" passed after 0.007 seconds.
+✔ Test "실측 형태 JSON을 해석하고 원격 호스트 누락을 읽는다 (AC-07)" passed after 0.007 seconds.
+✔ Test "저장한 프로젝트가 앱 재시작 후 같은 터미널에 다시 짝지어진다 (AC-08)" passed after 0.007 seconds.
+✔ Test "같은 폴더에 Claude 2개면 자동 확정하지 않는다 (AC-10)" passed after 0.008 seconds.
+✔ Test "핸들이 바뀌면 새 핸들로 매칭하고, 구 핸들 기준 확인 화면은 전송이 막힌다 (AC-09)" passed after 0.008 seconds.
+✔ Test "셸 인용" passed after 0.007 seconds.
+✔ Test "확인 뒤 대상 폴더가 바뀌면 전송 0회 (AC-13)" passed after 0.007 seconds.
+✔ Test "확인 뒤 호스트가 바뀌면 전송 0회 (AC-13)" passed after 0.007 seconds.
+✔ Test "정상이면 정확히 1회 전송하고 '터미널에 전달됨' (AC-14)" passed after 0.007 seconds.
+✔ Test "send 응답 시간 초과는 '상태 불명'이고 재전송하지 않는다 (AC-15)" passed after 0.007 seconds.
+✔ Test "실측 receipt JSON을 해석한다" passed after 0.007 seconds.
+✔ Test "입력 수락만 관찰되면 '상태 불명'" passed after 0.006 seconds.
+✔ Test mcpDialog() passed after 0.006 seconds.
+✔ Test "플랜 모드가 확인되지 않으면 보내지 않는다 (AC-17)" passed after 0.007 seconds.
+✔ Test "대화상자가 떠 있으면 전송 0회" passed after 0.007 seconds.
+✔ Test empty() passed after 0.006 seconds.
+✔ Test normalReady() passed after 0.007 seconds.
+✔ Test shell() passed after 0.006 seconds.
+✔ Test planReady() passed after 0.006 seconds.
+✔ Test "전송 결과가 불명이면 이어하기로도 재전송하지 않는다" passed after 0.007 seconds.
+✔ Suite "AC-07~10 세션 탐색·재연결" passed after 0.008 seconds.
+✔ Suite "AC-19·20 스킬" passed after 0.008 seconds.
+✔ Suite "AC-11·12 분류·프롬프트" passed after 0.008 seconds.
+✔ Suite "화면 판정" passed after 0.008 seconds.
+✔ Test "기존 폴더·상위 탈출·symlink·권한 없음·잘못된 이름은 중단 (AC-16)" passed after 0.008 seconds.
+✔ Test "대화상자가 뜨면 멈추고 보내지 않는다, 처리 후 이어하면 같은 터미널로 1회 전송 (AC-17·18)" passed after 0.008 seconds.
+✔ Test "Orca 단계 실패 후 이어하기: 폴더 재사용, 터미널·전송 중복 없음 (AC-18)" passed after 0.008 seconds.
+✔ Suite "AC-16·18 새 프로젝트" passed after 0.009 seconds.
+✔ Test "중복 클릭은 1회만 처리 (AC-14)" passed after 0.228 seconds.
+✔ Suite "AC-13~15 전송 안전" passed after 0.229 seconds.
+✔ Test run with 35 tests in 6 suites passed after 0.229 seconds.

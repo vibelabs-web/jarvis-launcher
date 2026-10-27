@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>개발 중 실제로 나온 결함 기록</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">개발 중 실제로 나온 결함 기록</div><div class="sub">dev-bug-log.md</div><a class="lvl1" href="#개발-중-실제로-나온-결함-기록">개발 중 실제로 나온 결함 기록</a></nav>
+<main><h1 id="개발-중-실제로-나온-결함-기록">개발 중 실제로 나온 결함 기록</h1>
+<p>재현 → 원인 지점 → 수정 → 재발 방지 확인 순서로 기록한다.</p>
+<div class="table-wrap"><table><thead><tr><th>#</th><th>재현</th><th>원인 지점</th><th>수정</th><th>재발 방지 확인</th></tr></thead><tbody><tr><td>B1</td><td>&quot;새로운 독서 메모 앱을 만들어보자&quot;가 새 프로젝트로 분류되지 않음</td><td><code>IntentRouter.newProjectCues</code>가 붙어 있는 구절(&quot;새로운 앱&quot;)만 찾음</td><td>'새/신규' 표현 + '만들/시작' 표현의 조합 규칙(<code>looksLikeNewProject</code>) 추가</td><td><code>BrainTests.ruleNew</code> 통과</td></tr><tr><td>B2</td><td>원문 &quot;로그인은 만들지 마&quot;의 금지 조건이 정리본에서 빠져도 경고가 없음</td><td><code>PromptComposer</code> 부정 표현 목록에 '-지 마' 형태가 없음</td><td>정규식 <code>지s*(마|말)</code> 추가(<code>hasNegation</code>)</td><td><code>BrainTests.composer</code> 통과</td></tr><tr><td>B3</td><td>Xcode 없는 환경에서 <code>swift test</code>가 빌드만 하고 테스트를 0개 실행</td><td>CLT에 xctest 러너가 없음(<code>xcrun --find xctest</code> 실패)</td><td>Swift Testing 진입점을 직접 부르는 실행 타깃 <code>JARVISCoreTestRunner</code></td><td>35개 테스트 실행 로그(<code>qa/evidence/unit/</code>)</td></tr><tr><td>B4</td><td><code>run-dev.sh</code>에서 <code>open: unrecognized option '--env JARVIS_DEV_HOOKS=1'</code></td><td>zsh가 <code>${VAR:+…}</code> 확장을 한 단어로 넘김</td><td>인자를 배열로 구성</td><td>재실행 성공</td></tr><tr><td>B5</td><td>패널 표시 직후 로그가 <code>key=false</code></td><td>표시 직후에는 키 윈도우가 아직 확정되지 않음</td><td>0.4초 뒤 <code>panel.focus … textInputFocused=</code> 로그 추가. 접근성 트리로 포커스가 입력 칸에 있음을 확인</td><td>AC-01 수동 집계에서 확인</td></tr><tr><td>B6</td><td>E2E 정리 단계가 &quot;확인 불가&quot;</td><td>닫은 직후 핸들이 무효(<code>terminal_handle_stale</code>)가 되어 <code>wait --for exit</code>가 실패</td><td>결과 해석을 보고서에 기록. 실제로 닫혔는지는 <code>terminal list</code>로 확인</td><td>e2e 보고서 사후 확인 절</td></tr></tbody></table></div>
+<p>참고: AC-01 자동 반복 스크립트는 작가님 화면에서 패널을 깜박이게 해서 폐기했다. AC-01은 작가님이 직접 누른 기록을 집계해 검증한다.</p>
+<div class="meta-foot">원본: <code>dev-bug-log.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

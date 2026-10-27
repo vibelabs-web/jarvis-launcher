@@ -1,0 +1,2 @@
+Last login: Tue Oct 27 19:00:00 on ttys001
+<user>@<host> alpha-app %

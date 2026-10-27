@@ -1,0 +1,10 @@
+<user>@<host> jarvis-launcher % cd -- '~/x/qa/sandbox/jl-spike' && claude --permission-mode plan --session-id de4c49e7 -n jl-spike
+──────────────────────────────────────────────────────────────────────
+  3 new MCP servers found in this project
+  Select any you wish to enable.
+  MCP servers may execute code or access system resources. All tool calls require approval.
+  ❯ [✔] gemini
+    [✔] context7
+    [✔] playwright
+       Enable selected
+ Space to select · Esc to reject all
