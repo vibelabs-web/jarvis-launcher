@@ -182,6 +182,7 @@ struct ChipListView: View {
                 Text(model.listKind == .project ? "보낼 프로젝트" : "스킬 (파일·Orca 목록 기준, 전체 목록 아님)")
                     .font(.caption.weight(.semibold)).foregroundStyle(.secondary)
                 if !model.listQuery.isEmpty { Text("“\(model.listQuery)”").font(.caption).foregroundStyle(.secondary) }
+                Text(model.listKind == .skill && items.count >= 60 ? "상위 60개" : "\(items.count)개").font(.caption2).foregroundStyle(.tertiary)
                 Spacer()
                 Text("↑↓ 이동 · ↵ 선택 · esc 닫기").font(.caption2).foregroundStyle(.tertiary)
             }
@@ -190,19 +191,20 @@ struct ChipListView: View {
                 Text(model.listKind == .project ? "맞는 프로젝트가 없습니다. 설정 > 프로젝트에서 Orca를 다시 조회해 보세요" : "맞는 스킬이 없습니다")
                     .font(.callout).foregroundStyle(.secondary).padding(10)
             }
+            // 마우스를 올려도 키보드 강조(model.highlight)는 바꾸지 않는다.
+            // 바꾸면 강조 → 스크롤 → 마우스 아래 행이 바뀜 → 강조 …가 끝없이 반복되어 앱이 멈췄다(B16).
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 2) {
+                    LazyVStack(spacing: 2) {
                         ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                            row(item, highlighted: i == model.highlight)
+                            ListRow(item: item, highlighted: i == model.highlight, monospaced: model.listKind == .skill)
                                 .id(i)
                                 .onTapGesture { model.choose(item) }
-                                .onHover { if $0 { model.highlight = i } }
                         }
                     }
                     .padding(.horizontal, 4).padding(.bottom, 4)
                 }
-                .frame(maxHeight: min(CGFloat(items.count), 6) * 40)
+                .frame(height: min(CGFloat(items.count), 6) * 40)
                 .onChange(of: model.highlight) { _, h in proxy.scrollTo(h) }
             }
         }
@@ -210,10 +212,19 @@ struct ChipListView: View {
         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.2)))
     }
 
-    func row(_ item: AppModel.ListItem, highlighted: Bool) -> some View {
+}
+
+/// 목록 한 줄. 마우스를 올렸을 때의 표시는 이 줄 안에서만 처리한다.
+struct ListRow: View {
+    let item: AppModel.ListItem
+    let highlighted: Bool
+    let monospaced: Bool
+    @State private var hovered = false
+
+    var body: some View {
         HStack(alignment: .center, spacing: 8) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(item.title).font(model.listKind == .skill ? .system(.callout, design: .monospaced) : .callout.weight(.medium))
+                Text(item.title).font(monospaced ? .system(.callout, design: .monospaced) : .callout.weight(.medium)).lineLimit(1)
                 Text(item.subtitle).font(.caption).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
             }
             Spacer()
@@ -223,9 +234,11 @@ struct ChipListView: View {
         }
         .padding(.horizontal, 8).padding(.vertical, 4)
         .frame(height: 38)
-        .background(RoundedRectangle(cornerRadius: 7).fill(highlighted ? Color.accentColor.opacity(0.2) : Color.clear))
+        .background(RoundedRectangle(cornerRadius: 7).fill(
+            highlighted ? Color.accentColor.opacity(0.2) : hovered ? Color.secondary.opacity(0.1) : Color.clear))
         .opacity(item.enabled ? 1 : 0.45)
         .contentShape(Rectangle())
+        .onHover { hovered = $0 }
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
     }

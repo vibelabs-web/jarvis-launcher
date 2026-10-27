@@ -61,3 +61,36 @@ struct ComposerTriggerTests {
         #expect(p.lastProjectID == nil && p.useLLM == false && p.defaultParentFolder == "/x")
     }
 }
+
+@Suite("/ 스킬 검색")
+struct SkillSearchTests {
+    func skill(_ name: String, _ desc: String = "", plugin: String? = nil) -> SkillEntry {
+        SkillEntry(name: name, invocation: plugin.map { "/\($0):\(name)" } ?? "/\(name)", description: desc,
+                   source: plugin == nil ? .personal : .plugin, availability: .fileVerified, note: "", location: nil)
+    }
+
+    @Test("이름 앞부분 일치가 설명 일치보다 먼저")
+    func ranking() {
+        let all = [skill("deep-research", "orca 관련 언급"), skill("orchestrate"), skill("orca-cli"), skill("cmux", "orca 대신")]
+        #expect(SkillSearch.rank(all, query: "orca").map(\.name) == ["orca-cli", "deep-research", "cmux"])
+        #expect(SkillSearch.rank(all, query: "orc").map(\.name).prefix(2) == ["orchestrate", "orca-cli"])
+        #expect(SkillSearch.rank(all, query: "").count == 4)
+    }
+
+    @Test("플러그인 스킬은 콜론 뒤 이름으로도 찾는다")
+    func pluginTail() {
+        let all = [skill("x", "sdlc 설명"), skill("sdlc-build", plugin: "vibelabs-sdlc")]
+        #expect(SkillSearch.rank(all, query: "sdlc-b").map(\.name) == ["sdlc-build"])
+        #expect(SkillSearch.rank(all, query: "vibelabs-sdlc:").map(\.name) == ["sdlc-build"])
+    }
+
+    @Test("한글 자판 상태로 친 검색어도 찾는다")
+    func hangulKeys() {
+        #expect(HangulKeys.toQwerty("ㅐㄱㅊㅁ") == "orca")
+        #expect(HangulKeys.toQwerty("나ㅑㅣㅣ") == "skill")
+        #expect(HangulKeys.toQwerty("ㅓㅣ-ㄷ초ㅐ") == "jl-echo")
+        #expect(HangulKeys.toQwerty("orca") == nil)
+        let all = [skill("orca-cli"), skill("skill-installer")]
+        #expect(SkillSearch.rank(all, query: "ㅐㄱㅊ").map(\.name) == ["orca-cli"])
+    }
+}

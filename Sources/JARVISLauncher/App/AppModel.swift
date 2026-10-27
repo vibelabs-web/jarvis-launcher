@@ -38,7 +38,8 @@ final class AppModel: ObservableObject {
     // MARK: 입력
     @Published var phase: Phase = .compose
     @Published var session = ComposerSession()
-    @Published var caretUTF16: Int?
+    /// 커서 위치. 화면에 그리지 않으므로 발행하지 않는다(커서가 움직일 때마다 전체를 다시 그리지 않도록)
+    var caretUTF16: Int?
     /// 모델이 텍스트를 바꾼 뒤 입력창에 적용할 커서 위치
     @Published var pendingCaret: Int?
     @Published var focusTick = 0
@@ -191,11 +192,9 @@ final class AppModel: ObservableObject {
         caretUTF16 = caret
         if let t = TriggerParser.active(in: text, caretUTF16: caret) {
             activeTrigger = t
-            if listKind != t.kind { highlight = 0 }
-            listKind = t.kind
-            listQuery = t.query
+            if listKind != t.kind { listKind = t.kind; setHighlight(0) }
+            if listQuery != t.query { listQuery = t.query; setHighlight(0) }
             if t.kind == .skill && skills.isEmpty { Task { await loadSkills() } }
-            highlight = min(highlight, max(listItems.count - 1, 0))
         } else if activeTrigger != nil {
             activeTrigger = nil
             closeList()
@@ -203,6 +202,9 @@ final class AppModel: ObservableObject {
         if status?.kind == .ok { status = nil }
         scheduleSuggestion()
     }
+
+    /// 같은 값이면 발행하지 않는다(불필요한 다시 그리기 방지)
+    private func setHighlight(_ h: Int) { if highlight != h { highlight = h } }
 
     func caretMoved(_ caret: Int) {
         caretUTF16 = caret
@@ -224,15 +226,15 @@ final class AppModel: ObservableObject {
     }
 
     func closeList() {
-        listKind = nil
-        listQuery = ""
-        highlight = 0
+        if listKind != nil { listKind = nil }
+        if !listQuery.isEmpty { listQuery = "" }
+        setHighlight(0)
     }
 
     func moveHighlight(_ delta: Int) {
         let n = listItems.count
         guard n > 0 else { return }
-        highlight = (highlight + delta + n) % n
+        setHighlight((highlight + delta + n) % n)
     }
 
     func chooseHighlighted() {
@@ -323,7 +325,9 @@ final class AppModel: ObservableObject {
 
     var listItems: [ListItem] {
         let q = listQuery.lowercased()
-        func match(_ parts: String...) -> Bool { q.isEmpty || parts.contains { $0.lowercased().contains(q) } }
+        // 한글 자판 상태로 친 @검색어도 영문 키 위치로 함께 찾는다
+        let qs = [q, HangulKeys.toQwerty(q)].compactMap { $0 }
+        func match(_ parts: String...) -> Bool { q.isEmpty || parts.contains { p in qs.contains { p.lowercased().contains($0) } } }
         switch listKind {
         case .project:
             var items: [ListItem] = []
@@ -359,7 +363,7 @@ final class AppModel: ObservableObject {
             }
             return items
         case .skill:
-            return skills.filter { match($0.name, $0.description) }.prefix(60).map { s in
+            return SkillSearch.rank(skills, query: listQuery).prefix(60).map { s in
                 ListItem(id: "s-\(s.id)", title: s.invocation, subtitle: s.description.isEmpty ? s.note : s.description,
                          badge: "\(s.source.rawValue) · \(s.availability.rawValue)", enabled: s.callable, action: .skill(s.id))
             }
