@@ -25,6 +25,14 @@ public struct CreationCheckpoint: Codable, Equatable, Identifiable, Sendable {
     public var worktreeRoot: String?
     public var repoId: String?
     public var insideExistingRepo: Bool?
+    /// Orca 1.4.242의 `repo add`는 Git이 아닌 폴더를 거부한다(docs/orca-cli-contract.md §3.4).
+    /// 이때 멈추고 사용자가 `git init`을 따로 승인해야 진행한다(PRD FR-09).
+    public var needsGitInit: Bool?
+    public var gitInitApproved: Bool?
+    public var gitInitialized: Bool?
+    /// 기동 중 Claude가 끝나 셸로 돌아온 상태(예: 폴더 신뢰 대화상자에서 '종료' 선택). 이어하기 때 같은 터미널에서 1회 재시작한다.
+    public var claudeExited: Bool?
+    public var claudeRelaunches: Int?
     public var terminalHandle: String?
     public var terminalIncarnation: String?
     public var planModeVerified: Bool
@@ -68,10 +76,19 @@ public struct ProjectCreationCoordinator: Sendable {
     /// '준비됐지만 플랜 모드 줄 없음'을 몇 번 연속 봐야 멈출지
     public var planConfirmReads = 4
     public var sleep: @Sendable (TimeInterval) async -> Void = { try? await Task.sleep(nanoseconds: UInt64($0 * 1_000_000_000)) }
+    /// 사용자가 승인한 경우에만 호출된다. 기본 구현은 `/usr/bin/git init <folder>`.
+    public var gitInit: @Sendable (String) async throws -> Void = { folder in
+        let r = try await CLIProcessRunner().run(executable: URL(fileURLWithPath: "/usr/bin/git"), arguments: ["init", "--quiet", folder], timeout: 20)
+        guard r.exitCode == 0 else { throw CLIError.launchFailed("git init 종료 코드 \(r.exitCode): \(r.stderr.prefix(200))") }
+    }
 
     public init(orca: OrcaAdapter, dispatcher: DispatchCoordinator) {
         self.orca = orca
         self.dispatcher = dispatcher
+    }
+
+    static func isNotGitError(_ error: Error) -> Bool {
+        "\(error.localizedDescription)".localizedCaseInsensitiveContains("not a valid git repository")
     }
 
     public static func claudeCommand(folder: String, sessionId: String, name: String) -> String {
@@ -88,6 +105,14 @@ public struct ProjectCreationCoordinator: Sendable {
             return (cp, .stopped(step, msg, canResume: resume))
         }
         func advance() { cp.lastError = nil; cp.updatedAt = Date(); onProgress(cp) }
+        func adopt(_ repo: RepoRecord) {
+            let root = PathTools.canonical(repo.path)
+            cp.worktreeRoot = root
+            cp.repoId = repo.id
+            cp.insideExistingRepo = root != cp.folderPath
+            cp.needsGitInit = false
+            advance()
+        }
 
         // 1. 폴더: 이미 만든 폴더는 재사용한다.
         if let existing = cp.folderPath {
@@ -105,17 +130,37 @@ public struct ProjectCreationCoordinator: Sendable {
         }
         let folder = cp.folderPath!
 
-        // 2. Orca 등록
+        // 2. Orca 등록. 작가님이 Orca UI에서 직접 연 경우를 위해 기존 등록부터 찾는다.
         if cp.worktreeRoot == nil {
-            do {
-                let repo = try await orca.addRepo(path: folder)
-                let root = PathTools.canonical(repo.path)
-                cp.worktreeRoot = root
-                cp.repoId = repo.id
-                cp.insideExistingRepo = root != folder
+            if let existing = (try? await orca.listRepos())?.first(where: { PathTools.canonical($0.path) == folder }) {
+                cp.worktreeRoot = folder
+                cp.repoId = existing.id
+                cp.insideExistingRepo = false
+                cp.needsGitInit = false
                 advance()
-            } catch {
-                return stop(.orca, "Orca에 폴더를 등록하지 못했습니다: \(error.localizedDescription). Orca에서 폴더를 직접 연 뒤 이어하기를 눌러 주세요")
+            } else {
+                do {
+                    let repo = try await orca.addRepo(path: folder)
+                    adopt(repo)
+                } catch {
+                    guard Self.isNotGitError(error) else {
+                        return stop(.orca, "Orca에 폴더를 등록하지 못했습니다: \(error.localizedDescription). Orca에서 폴더를 직접 연 뒤 이어하기를 눌러 주세요")
+                    }
+                    guard cp.gitInitApproved == true else {
+                        cp.needsGitInit = true
+                        return stop(.orca, "Orca는 Git 저장소만 등록할 수 있습니다. 'Git 초기화 후 등록'을 승인하거나, Orca에서 폴더를 직접 연 뒤 이어하기를 눌러 주세요")
+                    }
+                    do {
+                        if cp.gitInitialized != true {
+                            try await gitInit(folder)
+                            cp.gitInitialized = true
+                            advance()
+                        }
+                        adopt(try await orca.addRepo(path: folder))
+                    } catch {
+                        return stop(.orca, "Git 초기화 후 등록에 실패했습니다: \(error.localizedDescription)")
+                    }
+                }
             }
         }
         let root = cp.worktreeRoot!
@@ -149,11 +194,26 @@ public struct ProjectCreationCoordinator: Sendable {
 
         // 4. Claude 플랜 모드 확인. 대화상자에는 자동으로 응답하지 않는다(ADR-6).
         if !cp.planModeVerified {
+            if cp.claudeExited == true {
+                guard (cp.claudeRelaunches ?? 0) < 2 else {
+                    return stop(.claudeReady, "Claude 재시작을 이미 2번 했습니다. Orca에서 직접 확인해 주세요", resume: false)
+                }
+                let cmd = Self.claudeCommand(folder: folder, sessionId: UUID().uuidString.lowercased(), name: cp.name)
+                do {
+                    _ = try await orca.send(handle: handle, text: cmd, waitSubmitSeconds: 1, retryRequestId: nil)
+                } catch {
+                    return stop(.claudeReady, "같은 터미널에서 Claude를 다시 시작하지 못했습니다: \(error.localizedDescription)")
+                }
+                cp.claudeRelaunches = (cp.claudeRelaunches ?? 0) + 1
+                cp.claudeExited = false
+                advance()
+            }
             let deadline = Date().addingTimeInterval(readyTimeout)
             var lastState: ScreenState = .unknown
             // 프롬프트 줄이 하단 상태줄보다 먼저 그려질 수 있으므로, '준비됐지만 플랜 모드 줄 없음'은
             // 몇 번 더 읽어 본 뒤에 판정한다(1회 관찰된 사례, docs/dev-bug-log.md B7).
             var readyWithoutPlan = 0
+            var shellSeen = 0
             while true {
                 let lines = (try? await orca.readScreen(handle: handle)) ?? []
                 lastState = ScreenClassifier.classify(lines)
@@ -166,6 +226,12 @@ public struct ProjectCreationCoordinator: Sendable {
                 }
                 if case .dialog(let d) = lastState {
                     return stop(.claudeReady, "Claude가 확인을 기다리고 있습니다: \(d). Orca에서 직접 처리한 뒤 이어하기를 눌러 주세요")
+                }
+                if case .notClaude = lastState { shellSeen += 1 } else { shellSeen = 0 }
+                // 기동 직후 명령 입력 전에도 잠깐 셸 프롬프트가 보이므로 연속으로 여러 번 봐야 종료로 판정한다.
+                if shellSeen >= planConfirmReads {
+                    cp.claudeExited = true
+                    return stop(.claudeReady, "Claude가 종료되어 셸로 돌아왔습니다(대화상자에서 '종료'를 고른 경우 등). 이어하기를 누르면 같은 터미널에서 Claude를 다시 시작합니다")
                 }
                 if Date() >= deadline {
                     return stop(.claudeReady, "Claude 준비 상태를 \(Int(readyTimeout))초 안에 확인하지 못했습니다")

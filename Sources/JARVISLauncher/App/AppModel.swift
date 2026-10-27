@@ -227,9 +227,11 @@ final class AppModel: ObservableObject {
     func startRecording() {
         if let e = recognizer.check() { notice = e.localizedDescription + " — 텍스트로 입력할 수 있습니다"; return }
         Task {
-            guard await MicRecorder.requestPermission() else {
+            let before = MicRecorder.permissionLabel
+            let granted = await MicRecorder.requestPermission()
+            Diagnostics.log("mic.permission before=\(before) granted=\(granted)")
+            guard granted else {
                 notice = "마이크 권한이 없어 받아쓰기를 할 수 없습니다. 시스템 설정 > 개인정보 보호 > 마이크에서 허용할 수 있고, 텍스트 입력은 그대로 쓸 수 있습니다"
-                Diagnostics.log("mic.permission denied")
                 return
             }
             do {
@@ -239,6 +241,7 @@ final class AppModel: ObservableObject {
                 recorder = r
                 phase = .recording
                 statusLabel = "녹음 중"
+                Diagnostics.log("mic.recording started")
                 notice = nil
             } catch {
                 notice = "녹음을 시작하지 못했습니다: \(error.localizedDescription)"
@@ -431,6 +434,16 @@ final class AppModel: ObservableObject {
             }
             await refreshOrca()
         }
+    }
+
+    /// FR-09: Git 초기화는 사용자가 이 버튼으로 따로 승인할 때만 한다.
+    func approveGitInitAndResume() {
+        guard var cp = creation, cp.needsGitInit == true else { return }
+        cp.gitInitApproved = true
+        creation = cp
+        creationCanResume = true
+        Diagnostics.log("create.gitInitApproved")
+        startCreation()
     }
 
     private func persistCreation(_ cp: CreationCheckpoint) {

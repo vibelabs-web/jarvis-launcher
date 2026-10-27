@@ -18,11 +18,16 @@ public enum ScreenClassifier {
         "Yes, proceed", "Do you want to", "Would you like to proceed", "❯ 1.", "Esc to cancel",
         "Press Enter to continue", "Select any you wish",
     ]
-    static let shellPromptPattern = #"[%$#]\s*$"#
+    /// zsh/bash 기본 프롬프트(`user@host 폴더 %`). Claude 상태줄의 '1.07$' 같은 끝 문자를 오인하지 않도록 엄격하게 본다.
+    static let shellPromptPattern = #"^\S+@\S+ .*[%$#]\s*$"#
 
     /// 대화상자는 화면 하단에 그려지므로 마지막 20줄만 본다(대화 본문의 문장을 오인하지 않도록).
     public static func classify(_ allLines: [String]) -> ScreenState {
         let lines = Array(allLines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }.suffix(20))
+        // Claude가 끝나 셸로 돌아오면 위쪽에 대화상자 문구가 남아 있어도 셸 프롬프트가 우선이다(B11).
+        if let last = lines.last, last.range(of: shellPromptPattern, options: .regularExpression) != nil {
+            return .notClaude
+        }
         let text = lines.joined(separator: "\n")
         if let hit = dialogPatterns.first(where: { text.contains($0) }) {
             let context = lines.first(where: { $0.contains(hit) })?.trimmingCharacters(in: .whitespaces) ?? hit
@@ -32,10 +37,6 @@ public enum ScreenClassifier {
         let promptLine = lines.contains { $0.trimmingCharacters(in: .whitespaces).hasPrefix("❯") }
         let busy = lines.contains { $0.contains("esc to interrupt") }
         if promptLine { return .ready(planMode: planMode, busy: busy) }
-        if let last = lines.last(where: { !$0.trimmingCharacters(in: .whitespaces).isEmpty }),
-           last.range(of: shellPromptPattern, options: .regularExpression) != nil {
-            return .notClaude
-        }
         return .unknown
     }
 }

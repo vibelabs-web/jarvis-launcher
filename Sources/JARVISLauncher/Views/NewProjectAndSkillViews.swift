@@ -37,7 +37,7 @@ struct NewProjectView: View {
                     }
                 }
                 GridRow { Text("Claude 모드").foregroundStyle(.secondary); Text("Plan (고정) · 새 Orca 터미널") }
-                GridRow { Text("Git 초기화").foregroundStyle(.secondary); Text("하지 않음 (필요하면 Claude 세션에서 직접)") }
+                GridRow { Text("Git 초기화").foregroundStyle(.secondary); Text(gitInitText) }
             }
             .font(.callout)
             HStack {
@@ -62,6 +62,11 @@ struct NewProjectView: View {
                 Spacer()
                 if case .delivered = model.outcome {
                     Button("완료") { model.reset(clear: model.prefs.clearInputAfterSend) }.buttonStyle(.borderedProminent)
+                } else if model.creationCanResume && model.creation?.needsGitInit == true && model.creation?.gitInitApproved != true {
+                    Button("Orca에서 열기") { model.openInOrca() }
+                    Button("Git 초기화 후 등록 (승인)") { model.approveGitInitAndResume() }
+                        .help("이 폴더에서만 git init을 실행한 뒤 Orca에 등록합니다. Orca에서 폴더를 직접 열었다면 '여기서 이어하기'를 누르세요")
+                    Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
                 } else if model.creationCanResume {
                     Button("Orca에서 열기") { model.openInOrca() }
                     Button("여기서 이어하기") { model.startCreation() }.buttonStyle(.borderedProminent)
@@ -75,6 +80,13 @@ struct NewProjectView: View {
     }
 
     var locked: Bool { model.creation?.folderPath != nil }
+
+    var gitInitText: String {
+        guard let cp = model.creation else { return "하지 않음 (Orca가 요구하면 별도로 승인을 묻습니다)" }
+        if cp.gitInitialized == true { return "승인 후 초기화함" }
+        if cp.needsGitInit == true { return "필요 — Orca는 Git 저장소만 등록합니다. 아래 버튼으로 승인해야 진행합니다" }
+        return "하지 않음"
+    }
 
     var canStart: Bool {
         guard model.phase == .reviewNew, model.creation == nil else { return false }

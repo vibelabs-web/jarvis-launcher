@@ -15,6 +15,11 @@ func log(_ s: String) {
 func check(_ name: String, _ ok: Bool, _ detail: String = "") { log("- [\(ok ? "PASS" : "FAIL")] \(name)\(detail.isEmpty ? "" : " — \(detail)")") }
 
 guard let orcaURL = OrcaCLIAdapter.locate(configured: nil) else { print("orca not found"); exit(2) }
+if let i = CommandLine.arguments.firstIndex(of: "newproject"), CommandLine.arguments.count > i + 1 {
+    try await runNewProjectScenario(parent: CommandLine.arguments[i + 1], orcaURL: orcaURL, evidence: evidenceDir)
+    print("saved: \(evidenceDir.path)")
+    exit(0)
+}
 if CommandLine.arguments.contains("skill") {
     try await runSkillScenario(root: root, orcaURL: orcaURL, evidence: evidenceDir)
     print("saved: \(evidenceDir.path)")

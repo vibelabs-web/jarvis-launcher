@@ -131,6 +131,7 @@ public struct RepoRecord: Decodable, Equatable, Sendable {
 }
 
 public struct RepoAddResult: Decodable { public let repo: RepoRecord }
+public struct RepoListResult: Decodable { public let repos: [RepoRecord] }
 
 public struct OrcaStatus: Decodable, Sendable {
     public struct App: Decodable, Sendable { public let running: Bool? }

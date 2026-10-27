@@ -85,6 +85,8 @@ final class FakeOrca: OrcaAdapter, @unchecked Sendable {
         lock.withLock { addRepoCalls += 1 }
         return try addRepoBehavior(path)
     }
+    var repos: [RepoRecord] = []
+    func listRepos() async throws -> [RepoRecord] { lock.withLock { repos } }
     func installedSkills() async throws -> [OrcaSkill] { [] }
 
     func setScreen(_ handle: String, _ lines: [String]) { lock.withLock { screens[handle] = lines } }

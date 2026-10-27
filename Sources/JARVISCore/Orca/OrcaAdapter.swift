@@ -27,6 +27,7 @@ public protocol OrcaAdapter: Sendable {
     func createTerminal(worktreePath: String, title: String, command: String) async throws -> CreatedTerminal
     func waitFor(handle: String, condition: String, timeoutMs: Int) async throws -> WaitResult
     func addRepo(path: String) async throws -> RepoRecord
+    func listRepos() async throws -> [RepoRecord]
     func installedSkills() async throws -> [OrcaSkill]
 }
 
@@ -110,6 +111,10 @@ public struct OrcaCLIAdapter: OrcaAdapter {
 
     public func addRepo(path: String) async throws -> RepoRecord {
         try await call(["repo", "add", "--path", path], as: RepoAddResult.self, timeout: 20).repo
+    }
+
+    public func listRepos() async throws -> [RepoRecord] {
+        try await call(["repo", "list"], as: RepoListResult.self).repos
     }
 
     public func installedSkills() async throws -> [OrcaSkill] {

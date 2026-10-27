@@ -12,5 +12,9 @@
 | B6 | E2E 정리 단계가 "확인 불가" | 닫은 직후 핸들이 무효(`terminal_handle_stale`)가 되어 `wait --for exit`가 실패 | 결과 해석을 보고서에 기록. 실제로 닫혔는지는 `terminal list`로 확인 | e2e 보고서 사후 확인 절 |
 | B7 | 스킬 E2E에서 `--permission-mode plan`으로 띄운 세션의 준비 판정이 `planMode: false` | 원인 미특정. 화면 원문을 남기지 않았고, 재현 시도(`qa/evidence/spike0/m2-plan-footer-race.txt`)에서는 재현되지 않음. 상태줄이 늦게 그려지는 경합이 가설 | 새 프로젝트 흐름에서 '플랜 줄 없음'을 4회 연속 봐야 멈추도록 변경(`planConfirmReads`) | `ProjectCreationTests.lateFooter` 통과. 실기 재발 여부는 계속 관찰 |
 | B8 | 스킬 E2E 정리 단계가 "아직 남아 있음" | 닫은 지 1초 만에 목록을 확인함(닫기는 비동기) | 최대 10초까지 닫힘을 기다리도록 변경 | 직후 `terminal list`에서 사라진 것을 확인 |
+| B9 | 실모델이 "로그인은 만들지 마"를 "로그인 기능 생략"으로 옮겼는데 '부정 조건이 없다'는 거짓 경고 | `hasNegation` 목록에 '생략' 같은 표현이 없음 | '생략·미포함·불가·without' 추가 | `BrainTests.composer`의 B9 사례 통과 |
+| B10 | Git 밖 새 폴더가 Orca 등록 단계에서 실패(`Not a valid git repository`) | `ProjectCreationCoordinator`가 `repo add` 하나만 시도 | 'Git 초기화 승인' 경로 + `repo list` 재사용 추가(FR-09) | `nonGitFolder`, `manualRegistration` 테스트 + `qa/evidence/e2e-20261027-195922/newproject-report.md` |
+| B11 | Claude가 종료되어 셸로 돌아왔는데도 화면 위쪽의 대화상자 문구 때문에 계속 '대화상자 대기'로 판정 | `ScreenClassifier`가 대화상자 패턴을 셸 프롬프트보다 먼저 봄 | 마지막 줄이 셸 프롬프트면 `notClaude` 우선. 새 프로젝트 흐름은 '종료됨'으로 멈추고 이어하기 때 같은 터미널에서 1회 재시작. 기동 직후 순간적인 셸 프롬프트는 4회 연속일 때만 종료로 봄 | `exitedToShell`, `claudeExitedRelaunch`, 기존 `resume` 회귀 테스트 |
+| B12 | (테스트 대행 결함) 폴더 신뢰 대화상자에 Enter만 보내 'No, exit'가 선택됨 | 기본 선택이 'No, exit'인데 확인하지 않음 | 대행 응답을 ↓ + Enter로 수정, 대화상자 원문을 보고서에 기록 | 재실행에서 신뢰 후 정상 진행 |
 
 참고: AC-01 자동 반복 스크립트는 작가님 화면에서 패널을 깜박이게 해서 폐기했다. AC-01은 작가님이 직접 누른 기록을 집계해 검증한다.

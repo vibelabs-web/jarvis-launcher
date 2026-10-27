@@ -68,6 +68,11 @@ struct BrainTests {
         #expect(m.preservationWarnings.contains { $0.contains("~/notes/books") })
         #expect(m.preservationWarnings.contains { $0.contains("3") })
         #expect(m.preservationWarnings.contains { $0.contains("부정") })
+
+        // B9: 정리본이 '생략'으로 금지 조건을 옮겼으면 경고하지 않는다(실모델 출력에서 발견)
+        let kept = #"{"purpose":"독서 메모 앱","scope":["~/notes/books 읽기","태그 3개"],"done_criteria":["로그인 기능 생략"],"constraints":[],"questions":[],"first_step":"계획","names":["reading-notes"]}"#
+        let k = await PromptComposer.compose(original: original, llm: FakeLLM(output: kept))
+        #expect(!k.preservationWarnings.contains { $0.contains("부정") })
     }
 
     @Test("입력 세션: 뒤로 가기·받아쓰기 삽입에도 원문 유지 (AC-03)")
@@ -201,6 +206,71 @@ struct ProjectCreationTests {
         #expect(o.sendCount == 0)
     }
 
+    @Test("Git 아닌 폴더: 승인 전에는 멈추고, 승인하면 git init 1회 후 등록·전송 (실 Orca 1.4.242 동작 반영)")
+    func nonGitFolder() async {
+        let o = FakeOrca()
+        o.addRepoBehavior = { p in
+            if !FileManager.default.fileExists(atPath: p + "/.git") {
+                throw OrcaError.commandFailed(command: "repo add", message: "Not a valid git repository: \(p)")
+            }
+            return RepoRecord(id: "repo-git", path: p, kind: "git")
+        }
+        o.setScreen("term_new1", Fixture.lines("screen-plan-ready.txt"))
+        var c = coordinator(o)
+        let inits = Counter()
+        c.gitInit = { folder in
+            await inits.inc()
+            try FileManager.default.createDirectory(atPath: folder + "/.git", withIntermediateDirectories: false)
+        }
+        let (cp1, r1) = await c.run(CreationCheckpoint(parent: TestDirs.fresh("ng").path, name: "plain-folder"), prompt: "p")
+        guard case .stopped(.orca, _, true) = r1 else { Issue.record("\(r1)"); return }
+        #expect(cp1.needsGitInit == true)
+        #expect(await inits.value == 0)
+        #expect(o.createdTerminals.isEmpty && o.sendCount == 0)
+
+        var approved = cp1
+        approved.gitInitApproved = true
+        let (cp2, r2) = await c.run(approved, prompt: "p")
+        guard case .completed = r2 else { Issue.record("\(r2)"); return }
+        #expect(await inits.value == 1)
+        #expect(cp2.gitInitialized == true && cp2.insideExistingRepo == false)
+        #expect(o.createdTerminals.count == 1 && o.sendCount == 1)
+    }
+
+    @Test("작가님이 Orca에서 폴더를 직접 연 경우: 이어하기가 기존 등록을 재사용")
+    func manualRegistration() async {
+        let parent = TestDirs.fresh("man")
+        let o = FakeOrca()
+        o.addRepoBehavior = { _ in throw OrcaError.commandFailed(command: "repo add", message: "Not a valid git repository") }
+        o.setScreen("term_new1", Fixture.lines("screen-plan-ready.txt"))
+        let c = coordinator(o)
+        let (cp1, _) = await c.run(CreationCheckpoint(parent: parent.path, name: "manual-one"), prompt: "p")
+        o.repos = [RepoRecord(id: "folder-1", path: cp1.folderPath!, kind: "folder")]
+        let (cp2, r2) = await c.run(cp1, prompt: "p")
+        guard case .completed = r2 else { Issue.record("\(r2)"); return }
+        #expect(cp2.repoId == "folder-1")
+        #expect(o.addRepoCalls == 1)
+    }
+
+    @Test("기동 중 Claude가 종료되면 멈추고, 이어하기는 같은 터미널에서 1회 재시작 (B11)")
+    func claudeExitedRelaunch() async {
+        let o = FakeOrca()
+        o.setScreen("term_new1", Fixture.lines("screen-trust-then-exit.txt"))
+        let c = coordinator(o)
+        let (cp1, r1) = await c.run(CreationCheckpoint(parent: TestDirs.fresh("ex").path, name: "exit-one"), prompt: "p")
+        guard case .stopped(.claudeReady, let msg, true) = r1 else { Issue.record("\(r1)"); return }
+        #expect(msg.contains("종료"))
+        #expect(cp1.claudeExited == true && o.sendCount == 0)
+        o.setScreen("term_new1", Fixture.lines("screen-plan-ready.txt"))
+        let (cp2, r2) = await c.run(cp1, prompt: "메타")
+        guard case .completed = r2 else { Issue.record("\(r2)"); return }
+        #expect(o.createdTerminals.count == 1)
+        #expect(o.sentTexts.count == 2)                       // 재시작 명령 1 + 프롬프트 1
+        #expect(o.sentTexts[0].text.contains("claude --permission-mode plan"))
+        #expect(o.sentTexts[1].text == "메타")
+        #expect(cp2.claudeRelaunches == 1)
+    }
+
     @Test("상태줄이 늦게 그려져도(준비→플랜 줄 등장) 멈추지 않고 1회 전송 (B7)")
     func lateFooter() async {
         let o = FakeOrca()
@@ -222,6 +292,11 @@ struct ProjectCreationTests {
         _ = await c.run(cp, prompt: "p")
         #expect(o.sendCount == 1)
     }
+}
+
+actor Counter {
+    private(set) var value = 0
+    func inc() { value += 1 }
 }
 
 @Suite("AC-19·20 스킬")

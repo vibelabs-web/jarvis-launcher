@@ -59,11 +59,13 @@ JARVIS의 결과 매핑:
 ### 3.3 터미널 닫기 — **검증됨** (m0b-10)
 `orca terminal close --terminal <h> --tab --json` → `ptyKilled:false`가 즉시 반환된다. 닫기는 비동기이므로 `terminal wait --for exit`로 `exitCause.kind == operator_close`를 확인해야 한다.
 
-### 3.4 폴더 등록 — **부분 검증**
+### 3.4 폴더 등록 — **검증됨(제약 있음)**
 `orca repo add --path <dir> --json`
-- **Git 저장소 하위 폴더**를 넣으면 새로 등록하지 않고 **상위 Git 저장소 레코드를 반환**한다(m0b-01). 이 경우 새 worktree가 생기지 않는다.
-- Git이 아닌 빈 폴더가 `kind: folder`로 등록되는지는 **미검증**이다. 기존 repo 목록에 `kind: folder`가 1건 있어 지원은 하는 것으로 보인다. M4에서 Git 밖의 테스트 상위 폴더로 실증한다.
-- 정리: `orca project setup-delete --setup <id>`로 "repo-backed setup은 repo 호환 레코드를 제거"한다(스키마 노트). 열린 터미널이 있으면 거부되고, `--force`로 강제할 수 있다.
+- **Git 저장소 하위 폴더**: 새로 등록하지 않고 **상위 Git 저장소 레코드를 반환**한다(m0b-01).
+- **Git이 아닌 빈 폴더**: `Not a valid git repository`로 **거부된다**(`qa/evidence/e2e-20261027-195922/newproject-report.md`). CLI로 대신할 수 있는 경로를 찾지 못했다. `project setup-existing-folder --kind folder`는 `Imported folder does not match the selected project identity`, `terminal create --worktree path:<미등록 폴더>`와 `agent launch`는 `selector_not_found`였다.
+- JARVIS의 대응(PRD FR-09): 등록 단계에서 멈추고 **사용자가 'Git 초기화 후 등록'을 따로 승인**하면 `git init` → `repo add`. 또는 사용자가 Orca UI에서 폴더를 직접 열면, 이어하기 때 `repo list`에서 그 경로를 찾아 재사용한다.
+- Git 초기화 후 등록하면 worktree 루트가 그 폴더 자체가 된다(실측).
+- 정리: `orca project setup-delete --setup <id> --force` — 이 명령으로 테스트 등록을 해제하고 `repo list`에서 사라진 것을 확인했다.
 
 ### 3.5 사용하지 않는 명령
 - `orca agent launch`: Chat UI 설정에 따라 구조화 채팅으로 열릴 수 있다(스키마 노트). PRD는 TUI를 요구하므로 쓰지 않는다.
@@ -75,6 +77,11 @@ JARVIS의 결과 매핑:
 - JARVIS가 쓰는 기동 명령: `cd -- '<dir>' && claude --permission-mode plan --session-id <uuid> -n <slug>`
 - 플랜 모드 확인: `terminal read --screen`의 `tail`에 `plan mode on`이 있는 줄(m0b-06: `⏸ plan mode on (shift+tab to cycle)`)
 - 입력 가능 상태: 화면에 `❯` 프롬프트 줄이 있고, 아래 **차단 패턴**이 없어야 한다.
+
+### 4.0 새 폴더 기동 시 실제로 나온 대화상자 (실측, `qa/evidence/e2e-20261027-195922/newproject-report.md`)
+1. **폴더 신뢰**: "Quick safety check: Is this a project you created or one you trust? … ❯ No, exit / Yes, I trust this folder · Enter to confirm · Esc to cancel". **기본 선택이 "No, exit"이다.** Enter만 누르면 Claude가 종료된다.
+2. **MCP 승인**: "3 new MCP servers found in this project … Esc to reject all".
+JARVIS는 둘 다 자동으로 응답하지 않고 `사용자 확인 필요`로 멈춘다. Claude가 종료되어 셸로 돌아오면 `Claude 종료됨`으로 멈추고, 이어하기 때 같은 터미널에서 1회 다시 시작한다.
 
 ### 4.1 중요: `tui-idle`은 입력 가능 상태를 뜻하지 않는다 (m0b-03, m0b-04)
 기동 직후 Claude가 **"3 new MCP servers found in this project … Enable selected / Esc to reject all"** 대화상자를 띄운 상태에서도 `terminal wait --for tui-idle`이 `satisfied: true`를 반환했다.

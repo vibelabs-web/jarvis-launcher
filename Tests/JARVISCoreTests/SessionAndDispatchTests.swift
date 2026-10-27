@@ -177,4 +177,13 @@ struct ScreenClassifierTests {
     }
     @Test func shell() { #expect(ScreenClassifier.classify(Fixture.lines("screen-shell.txt")) == .notClaude) }
     @Test func empty() { #expect(ScreenClassifier.classify([]) == .unknown) }
+    @Test("폴더 신뢰 대화상자(실측 문구)는 dialog") func trustDialog() {
+        guard case .dialog = ScreenClassifier.classify(Fixture.lines("screen-trust-dialog.txt")) else { Issue.record("dialog여야 함"); return }
+    }
+    @Test("대화상자 문구가 남아 있어도 마지막 줄이 셸이면 notClaude (B11)") func exitedToShell() {
+        #expect(ScreenClassifier.classify(Fixture.lines("screen-trust-then-exit.txt")) == .notClaude)
+    }
+    @Test("상태줄이 '$'로 끝나도 셸로 오인하지 않음") func dollarStatus() {
+        #expect(ScreenClassifier.classify(["❯ ", "  🤖 Opus │ 💰 1.07$"]) == .ready(planMode: false, busy: false))
+    }
 }

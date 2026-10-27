@@ -98,7 +98,9 @@ public actor LlamaServerLLM: LocalLLM {
         let p = Process()
         p.executableURL = URL(fileURLWithPath: serverPath)
         p.arguments = ["-m", modelPath, "--host", "127.0.0.1", "--port", String(port), "--api-key", apiKey,
-                       "-c", "4096", "-ngl", "99", "--no-webui", "--jinja"]
+                       "-c", "4096", "-ngl", "99", "--no-webui", "--jinja",
+                       // 근거: qa/evidence/models/llama-server-help.txt (b11606)
+                       "--reasoning", "off", "--offline"]
         p.standardOutput = FileHandle.nullDevice
         p.standardError = FileHandle.nullDevice
         p.environment = ["PATH": "/usr/bin:/bin", "HOME": NSHomeDirectory()]

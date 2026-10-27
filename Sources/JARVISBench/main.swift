@@ -4,6 +4,10 @@ import JARVISCore
 /// AC-05 예비 측정: macOS TTS(ko_KR) 음성 → 앱과 같은 WhisperCLIRecognizer로 전사 → CER·RTF.
 /// 작가님 실제 음성 40문장 측정을 대신하지 않는다(결과는 '예비'로 표시).
 let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().path
+if CommandLine.arguments.dropFirst().first == "llm" {
+    try await runLLMBench(root: root)
+    exit(0)
+}
 let work = URL(fileURLWithPath: "\(root)/.local-data/bench-audio", isDirectory: true)
 try FileManager.default.createDirectory(at: work, withIntermediateDirectories: true)
 

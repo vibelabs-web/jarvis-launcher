@@ -116,7 +116,7 @@ public enum PromptComposer {
 
     /// 한국어 부정·금지 표현. "만들지 마", "하지 말 것" 같은 '-지 마/말' 형태 포함.
     static func hasNegation(_ s: String) -> Bool {
-        let words = ["금지", "않", "없이", "빼고", "제외", "말고", "don't", "do not", "never"]
+        let words = ["금지", "않", "없이", "빼고", "제외", "말고", "생략", "미포함", "불가", "don't", "do not", "never", "without"]
         return words.contains(where: s.lowercased().contains) || s.range(of: #"지\s*(마|말)"#, options: .regularExpression) != nil
     }
 
