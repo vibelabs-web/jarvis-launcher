@@ -10,6 +10,7 @@ struct PromptHistoryView: View {
     @State private var thisProjectOnly = true
     @State private var selectedID: Int64?
     @State private var message: String?
+    @FocusState private var listFocused: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -17,6 +18,7 @@ struct PromptHistoryView: View {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
                 TextField("기록 검색", text: $search).textFieldStyle(.plain)
+                    .onKeyPress(.downArrow) { listFocused = true; move(entries.first?.id == currentID && selectedID == nil ? 0 : 1); return .handled }
                 if let name = projectFolder {
                     Toggle("\(name)만", isOn: $thisProjectOnly).toggleStyle(.checkbox).font(.caption)
                 }
@@ -35,10 +37,16 @@ struct PromptHistoryView: View {
         }
         .padding(12)
         .frame(width: PanelController.width, height: PanelController.historyHeight, alignment: .topLeading)
-        .onAppear(perform: reload)
+        .onAppear { reload(); listFocused = true }
+        // 기록 창에 포커스가 있을 때도 ⌘Y로 닫는다(Esc는 패널의 cancelOperation이 처리)
+        .onKeyPress(characters: ["y"]) { press in
+            guard press.modifiers == .command else { return .ignored }
+            model.toggleHistory()
+            return .handled
+        }
         .onChange(of: search) { _, _ in reload() }
         .onChange(of: thisProjectOnly) { _, _ in reload() }
-        .onChange(of: model.historyOpen) { _, open in if open { reload() } }
+        .onChange(of: model.historyOpen) { _, open in if open { reload(); listFocused = true } }
     }
 
     var header: some View {
@@ -57,21 +65,45 @@ struct PromptHistoryView: View {
         }
     }
 
+    /// 한 번 클릭은 바로 선택(B25: 두 번 클릭 제스처를 먼저 걸어 두면 한 번 클릭이 더블클릭 간격만큼 늦게 처리됐다).
+    /// 두 번 클릭은 동시 제스처로 받아 입력창에 넣는다. 목록에 포커스가 있으면 ↑↓ 이동, ↵ 입력창에 넣기.
     var list: some View {
-        ScrollView {
-            LazyVStack(alignment: .leading, spacing: 2) {
-                ForEach(entries) { e in
-                    HistoryRow(entry: e, selected: e.id == selectedID)
-                        .onTapGesture(count: 2) { model.insertFromHistory(e.text) }  // 두 번 클릭을 먼저 둬야 한 번 클릭과 구분된다
-                        .onTapGesture { selectedID = e.id }
+        ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: 2) {
+                    ForEach(entries) { e in
+                        HistoryRow(entry: e, selected: e.id == currentID)
+                            .id(e.id)
+                            .onTapGesture { selectedID = e.id; listFocused = true }
+                            .simultaneousGesture(TapGesture(count: 2).onEnded { model.insertFromHistory(e.text) })
+                    }
                 }
             }
+            .frame(width: 270)
+            .focusable()
+            .focused($listFocused)
+            .focusEffectDisabled()
+            .onKeyPress(.downArrow) { move(1); return .handled }
+            .onKeyPress(.upArrow) { move(-1); return .handled }
+            .onKeyPress(.return) {
+                if let e = entries.first(where: { $0.id == currentID }) { model.insertFromHistory(e.text) }
+                return .handled
+            }
+            .onChange(of: selectedID) { _, id in if let id { proxy.scrollTo(id) } }
         }
-        .frame(width: 270)
+    }
+
+    /// 아직 고르지 않았으면 맨 위 항목
+    var currentID: Int64? { selectedID ?? entries.first?.id }
+
+    func move(_ delta: Int) {
+        guard !entries.isEmpty else { return }
+        let i = entries.firstIndex { $0.id == currentID } ?? 0
+        selectedID = entries[min(max(i + delta, 0), entries.count - 1)].id
     }
 
     @ViewBuilder var detail: some View {
-        if let e = entries.first(where: { $0.id == selectedID }) ?? entries.first {
+        if let e = entries.first(where: { $0.id == currentID }) {
             VStack(alignment: .leading, spacing: 6) {
                 HStack(spacing: 6) {
                     Text(e.project).font(.caption.weight(.semibold))

@@ -151,7 +151,9 @@ final class PanelController {
     // MARK: 프롬프트 기록 창 (런처 아래)
 
     private func syncHistory() {
-        if model.historyOpen && panel.isVisible { showHistory() } else if historyPanel?.isVisible == true { hideHistory() }
+        let visible = historyPanel?.isVisible == true
+        // 모델이 바뀔 때마다 불리므로 상태가 바뀔 때만 열고 닫는다(열 때마다 포커스를 가져오면 런처 타이핑을 빼앗는다)
+        if model.historyOpen && panel.isVisible { if !visible { showHistory() } } else if visible { hideHistory() }
     }
 
     private func showHistory() {
@@ -172,7 +174,8 @@ final class PanelController {
         positionHistory()
         if h.parent == nil { panel.addChildWindow(h, ordered: .above) }
         h.alphaValue = panel.alphaValue
-        h.orderFront(nil)
+        // 열리면 바로 ↑↓로 고를 수 있게 기록 창이 키 입력을 받는다
+        h.makeKeyAndOrderFront(nil)
         h.invalidateShadow()
     }
 
@@ -180,6 +183,8 @@ final class PanelController {
         guard let h = historyPanel else { return }
         panel.removeChildWindow(h)
         h.orderOut(nil)
+        // 닫으면 런처 입력창으로 돌아간다
+        if panel.isVisible { panel.makeKey(); model.focusTick += 1 }
     }
 
     /// 런처 바로 아래 8pt. 아래 공간이 모자라면 런처 위에 붙인다
