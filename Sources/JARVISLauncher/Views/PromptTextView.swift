@@ -14,6 +14,10 @@ final class ComposerTextView: NSTextView {
     override func keyDown(with event: NSEvent) {
         guard let model else { super.keyDown(with: event); return }
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if event.keyCode == 16, flags == .command, !hasMarkedText(), !isFullView {  // ⌘Y 프롬프트 기록
+            model.toggleHistory()
+            return
+        }
         if event.keyCode == 14, flags.contains(.command), !hasMarkedText() {  // ⌘E 크게 보기, ⌘⇧E 전체 보기
             if flags.contains(.shift) { isFullView ? model.onCloseFullView?() : model.onOpenFullView?() }
             else if !isFullView { model.toggleExpanded() }

@@ -46,6 +46,8 @@ final class AppModel: ObservableObject {
     @Published var focusTick = 0
     /// 입력창 크게 보기(⌘E). 긴 정리본을 패널 안에서 읽기 위함
     @Published var inputExpanded = false
+    /// 런처 아래 프롬프트 기록 창(⌘Y)
+    @Published var historyOpen = false
 
     // MARK: 칩
     @Published var selectedProjectID: UUID?
@@ -126,6 +128,23 @@ final class AppModel: ObservableObject {
 
     static let inputHeight: CGFloat = 120
     static let expandedInputHeight: CGFloat = 480
+
+    func toggleHistory() {
+        historyOpen.toggle()
+        Diagnostics.log("history.\(historyOpen ? "open" : "close")")
+    }
+
+    /// 기록 창에서 고른 프롬프트를 입력창 커서 자리에 넣는다(바로 보내지 않음)
+    func insertFromHistory(_ text: String) {
+        let before = (session.original as NSString).length
+        let caret = caretUTF16
+        session.insertTranscript(text, atUTF16: caret)
+        let after = (session.original as NSString).length
+        pendingCaret = min((caret ?? before) + (after - before), after)
+        lastDictation = nil
+        setStatus("기록에서 가져왔습니다. 확인·수정 후 ⌘↵로 보내세요", .info, autoClear: 5)
+        focusTick += 1
+    }
 
     func toggleExpanded() {
         inputExpanded.toggle()

@@ -45,6 +45,9 @@ func glassContent<V: View>(_ root: V, material: NSVisualEffectView.Material = .h
     blur.material = material
     blur.blendingMode = .behindWindow
     blur.state = .active
+    // 둥근 모서리는 maskImage로 자른다. 레이어 cornerRadius만 쓰면 창 뒤 흐림이 잘리지 않아
+    // 네 귀퉁이에 사각형 잔상이 보였다(B23)
+    blur.maskImage = roundedMask(radius: 16)
     blur.wantsLayer = true
     blur.layer?.cornerRadius = 16
     blur.layer?.masksToBounds = true
@@ -59,4 +62,18 @@ func glassContent<V: View>(_ root: V, material: NSVisualEffectView.Material = .h
         host.bottomAnchor.constraint(equalTo: blur.bottomAnchor),
     ])
     return blur
+}
+
+/// 크기가 바뀌어도 모서리만 유지되는 둥근 사각형 마스크(capInsets로 늘림)
+@MainActor
+func roundedMask(radius: CGFloat) -> NSImage {
+    let edge = radius * 2 + 1
+    let image = NSImage(size: NSSize(width: edge, height: edge), flipped: false) { rect in
+        NSColor.black.setFill()
+        NSBezierPath(roundedRect: rect, xRadius: radius, yRadius: radius).fill()
+        return true
+    }
+    image.capInsets = NSEdgeInsets(top: radius, left: radius, bottom: radius, right: radius)
+    image.resizingMode = .stretch
+    return image
 }

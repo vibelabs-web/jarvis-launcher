@@ -60,6 +60,13 @@ struct PromptRootView: View {
             StatusDot(status: model.menuStatus)
             Text(model.statusLabel).font(.caption).foregroundStyle(.secondary)
             Spacer()
+            Button { model.toggleHistory() } label: {
+                Image(systemName: "clock.arrow.circlepath")
+                    .foregroundStyle(model.historyOpen ? Color.accentColor : Color.primary)
+            }
+            .buttonStyle(.borderless)
+            .help(model.historyOpen ? "프롬프트 기록 닫기 (⌘Y)" : "프롬프트 기록 (⌘Y)")
+            .accessibilityLabel(model.historyOpen ? "프롬프트 기록 닫기" : "프롬프트 기록 열기")
             WindowControls(opacity: model.prefs.panelOpacity, pinned: model.prefs.panelPinned,
                            setOpacity: model.setPanelOpacity, setPinned: model.setPanelPinned)
             Button { model.onOpenSettings?() } label: { Image(systemName: "gearshape") }

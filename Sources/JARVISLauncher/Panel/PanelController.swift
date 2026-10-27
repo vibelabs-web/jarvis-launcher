@@ -28,6 +28,9 @@ final class PanelController {
     /// 패널 내용(SwiftUI). 높이는 손으로 계산하지 않고 이 뷰가 잰 크기에 맞춘다(B21)
     private var host: NSView?
     static let width: CGFloat = 680
+    static let historyHeight: CGFloat = 320
+    /// 런처 아래에 붙는 프롬프트 기록 창(자식 창이라 런처와 함께 움직인다)
+    private var historyPanel: PromptPanel?
 
     init(model: AppModel) {
         self.model = model
@@ -59,7 +62,10 @@ final class PanelController {
                 guard let self else { return }
                 self.applyWindowPrefs()
                 // SwiftUI가 바뀐 내용을 그린 뒤에 잰다
-                DispatchQueue.main.async { self.fitToContent() }
+                DispatchQueue.main.async {
+                    self.fitToContent()
+                    self.syncHistory()
+                }
             }
             .store(in: &bag)
     }
@@ -73,6 +79,7 @@ final class PanelController {
         guard let vf = screen?.visibleFrame else { return }
         let frame = PanelGeometry.frame(contentSize: CGSize(width: Self.width, height: contentHeight()), visibleFrame: vf)
         panel.setFrame(frame, display: true)
+        panel.invalidateShadow()
         NSApp.activate(ignoringOtherApps: true)
         panel.makeKeyAndOrderFront(nil)
         model.panelDidShow()
@@ -99,6 +106,7 @@ final class PanelController {
         let fa = CGFloat(min(max(p.fullViewOpacity, 0.4), 1))
         if abs(w.alphaValue - fa) > 0.001 { w.alphaValue = fa }
         // 켜져 있으면 패널보다 한 단계 위
+        if let h = historyPanel, abs(h.alphaValue - pa) > 0.001 { h.alphaValue = pa }
         let fl: NSWindow.Level = p.fullViewPinned ? NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1) : .normal
         if w.level != fl { w.level = fl }
     }
@@ -140,7 +148,51 @@ final class PanelController {
         if panel.isVisible { panel.makeKeyAndOrderFront(nil); model.focusTick += 1 }
     }
 
+    // MARK: 프롬프트 기록 창 (런처 아래)
+
+    private func syncHistory() {
+        if model.historyOpen && panel.isVisible { showHistory() } else if historyPanel?.isVisible == true { hideHistory() }
+    }
+
+    private func showHistory() {
+        let h: PromptPanel
+        if let existing = historyPanel { h = existing } else {
+            h = PromptPanel(contentRect: NSRect(x: 0, y: 0, width: Self.width, height: Self.historyHeight),
+                            styleMask: [.nonactivatingPanel, .borderless], backing: .buffered, defer: false)
+            h.backgroundColor = .clear
+            h.isOpaque = false
+            h.hasShadow = true
+            h.isReleasedWhenClosed = false
+            h.hidesOnDeactivate = false
+            h.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient]
+            h.onCancel = { [weak model] in model?.toggleHistory() }
+            h.contentView = glassContent(PromptHistoryView(model: model))
+            historyPanel = h
+        }
+        positionHistory()
+        if h.parent == nil { panel.addChildWindow(h, ordered: .above) }
+        h.alphaValue = panel.alphaValue
+        h.orderFront(nil)
+        h.invalidateShadow()
+    }
+
+    private func hideHistory() {
+        guard let h = historyPanel else { return }
+        panel.removeChildWindow(h)
+        h.orderOut(nil)
+    }
+
+    /// 런처 바로 아래 8pt. 아래 공간이 모자라면 런처 위에 붙인다
+    private func positionHistory() {
+        guard let h = historyPanel, let vf = (panel.screen ?? NSScreen.main)?.visibleFrame else { return }
+        let f = panel.frame
+        var y = f.minY - 8 - Self.historyHeight
+        if y < vf.minY + 8 { y = min(f.maxY + 8, vf.maxY - Self.historyHeight) }
+        h.setFrame(NSRect(x: f.minX, y: y, width: Self.width, height: Self.historyHeight), display: true)
+    }
+
     func hide() {
+        hideHistory()
         closeFullView()
         panel.orderOut(nil)
         model.panelDidHide()
@@ -169,5 +221,7 @@ final class PanelController {
         f.size.height = target.height
         f.origin.y = max(screen.visibleFrame.minY + 16, top - target.height)
         panel.setFrame(f, display: true, animate: false)
+        panel.invalidateShadow()
+        if historyPanel?.isVisible == true { positionHistory() }
     }
 }
