@@ -120,6 +120,8 @@ struct ChipBar: View {
     }
 
     var projectBadge: String? {
+        // 녹음 중에는 파형 자리를 위해 '추천'·'지난 대상' 배지를 잠시 숨긴다(B22)
+        if model.phase == .recording, model.softSelection != nil { return nil }
         if let soft = model.softSelection, model.selectedProjectID != nil || model.newProjectMode { return soft }
         guard let p = model.selectedProject else { return nil }
         if model.currentTarget != nil { return "연결됨" }
@@ -175,6 +177,7 @@ struct Chip: View {
                     Text(label).font(.callout).lineLimit(1).truncationMode(.middle).frame(maxWidth: 170, alignment: .leading)
                     if let b = badge {
                         Text(b).font(.caption2.weight(.medium)).foregroundStyle(badgeColor)
+                            .lineLimit(1).fixedSize()  // B22: 폭이 줄면 '지난 대상'이 두 줄로 접혀 칩 밖으로 넘쳤다
                             .padding(.horizontal, 5).padding(.vertical, 1)
                             .background(Capsule().fill(badgeColor.opacity(0.15)))
                     }
@@ -329,7 +332,7 @@ struct WaveformView: View {
                 ForEach(Array(meter.levels.enumerated()), id: \.offset) { _, level in
                     Capsule()
                         .fill(Color.red.opacity(0.75))
-                        .frame(width: 2.5, height: max(2, CGFloat(level) * 22))
+                        .frame(width: 2, height: max(2, CGFloat(level) * 20))
                 }
             }
             .frame(height: 24)
