@@ -1,0 +1,7 @@
+# orca terminal read --terminal <this-session-handle> --screen --json
+관찰 1 (플랜 모드 중, 2026-10-27 계획 단계): source=screen, tail 마지막 줄
+  "  ⏸ plan mode on (shift+tab to cycle)"
+  (계획 단계 대화 기록에 원문이 있음. 당시 파일로 저장하지 않았다.)
+관찰 2 (플랜 모드 종료 후 재실행): source=screen, "plan mode" 줄 없음
+→ 플랜 모드 여부가 화면 footer에 나타나고, 모드가 바뀌면 사라진다는 것을 두 관찰로 확인.
+→ M0b에서 테스트 터미널을 대상으로 원문 증거를 파일로 다시 남긴다 (m0b-*.json).

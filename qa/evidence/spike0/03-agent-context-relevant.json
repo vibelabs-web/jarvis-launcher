@@ -1,0 +1,563 @@
+{
+  "schemaVersion": 1,
+  "commandCount": 288,
+  "commands": [
+    {
+      "command": "agent launch",
+      "path": [
+        "agent",
+        "launch"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Start an agent in an existing workspace, as a chat or a terminal",
+      "usage": "orca agent launch --agent <id> [--worktree <selector>] [--prompt <text>] [--model <id>] [--effort <level>] [--surface chat|terminal] [--focus] [--retry-launch <operationId>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "agent",
+        "worktree",
+        "prompt",
+        "model",
+        "effort",
+        "surface",
+        "focus",
+        "retry-launch",
+        "page"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca agent launch --agent codex --json",
+        "orca agent launch --agent codex --model gpt-6-astra --effort high --prompt \"Write the design doc\" --json",
+        "orca agent launch --agent claude --worktree path:/projects/myapp --focus"
+      ],
+      "notes": [
+        "Starts the agent the way a new agent tab does: as a chat when your Chat UI setting is on and the agent and host support it, otherwise as a terminal. The result says which (`outcome.kind`) and why (`receipt.detail`).",
+        "--surface chat|terminal picks for this launch instead of your setting. --surface terminal always runs the agent CLI; --surface chat is refused when Orca can establish before starting anything that this agent cannot open as a chat there. If support cannot be checked, the launch can fall back to a terminal. If chat becomes unavailable after creating a workspace, Orca keeps the workspace, setup and default tabs, then opens a terminal; the receipt explains the fallback.",
+        "--worktree defaults to the native folder workspace or worktree containing the current directory. For a new checkout with its agent, use `orca worktree create --agent`.",
+        "--model takes a provider model id and --effort a reasoning effort for that model; --effort requires --model. They apply to either surface.",
+        "The tab opens without switching focus; pass --focus to switch to it.",
+        "If the launch reply is lost, re-issue the same command from the same directory on the same host with --retry-launch <operationId> from the error. Never retry as a fresh launch; older hosts require inspecting the workspace first."
+      ]
+    },
+    {
+      "command": "host list",
+      "path": [
+        "host",
+        "list"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List every machine this Orca host can target, and how to name each one",
+      "usage": "orca host list [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "page"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca host list",
+        "orca host list --json"
+      ],
+      "notes": [
+        "Answers \"what can I target and what do I pass\" in one place: this machine, the SSH targets registered on it, and the Orca servers paired with it.",
+        "The three kinds are reached differently. A paired Orca server is a connection, selected with --environment <name>. An SSH target is a machine the connected Orca host reaches, selected with --host ssh:<id>. Passing one where the other belongs is the most common way to get an empty or missing-host answer.",
+        "Commands that take --host also accept any name this list prints, such as --host \"this machine\" or --host <ssh-target-name>. A name two hosts share is refused with the exact flag for each.",
+        "SSH rows include the detected remote platform after that target has connected (linux, darwin, or win32); disconnected or older targets report platform unknown.",
+        "SSH rows also include whether the target is currently connected and its lifecycle status when known.",
+        "Paired-server rows come from the pairing store and report platform unknown; ask one server directly with `orca host name --environment <name>`.",
+        "SSH targets are read from this machine's own Orca runtime, so this lists that machine's targets and not another server's. Run `orca host list` on the other machine to see the targets registered there.",
+        "--environment and --pairing-code are rejected rather than ignored: paired servers come from this machine’s pairing store, so a routed answer would describe two machines at once."
+      ]
+    },
+    {
+      "command": "project list",
+      "path": [
+        "project",
+        "list"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List durable projects known to Orca",
+      "usage": "orca project list [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca project list",
+        "orca project list --json"
+      ],
+      "notes": []
+    },
+    {
+      "command": "project setup-delete",
+      "path": [
+        "project",
+        "setup-delete"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Remove a project host setup",
+      "usage": "orca project setup-delete --setup <setup-id> [--host <host>] [--force] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "setup",
+        "host",
+        "force"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca project setup-delete --setup github:stablyai/orca::gpu --json"
+      ],
+      "notes": [
+        "Independent setups are removed directly.",
+        "Repo-backed setups remove the registered repo compatibility record.",
+        "Refuses while the project has open terminals or saved workspace details; --force removes it anyway."
+      ]
+    },
+    {
+      "command": "project setup-existing-folder",
+      "path": [
+        "project",
+        "setup-existing-folder"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Make a project available on a host by importing an existing folder",
+      "usage": "orca project setup-existing-folder --project <id> --host <host> --path <path> [--kind git|folder] [--display-name <name>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "project",
+        "host",
+        "path",
+        "kind",
+        "display-name"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca project setup-existing-folder --project github:stablyai/orca --host local --path ~/orca",
+        "orca project setup-existing-folder --project github:stablyai/orca --host runtime:03ef704c-b180-4b10-998d-e28fbd5de9a3 --path /home/me/orca --kind git --json"
+      ],
+      "notes": [
+        "For remote runtimes, --path must be an absolute path on the remote server.",
+        "--host takes local, ssh:<target-id>, runtime:<environment-id>, or the bare host name `orca host list` prints for any of them.",
+        "SSH targets are set up through the desktop UI because the desktop client owns SSH connections.",
+        "--project takes a project id or an existing project's name. A remote-backed Git folder's project id usually comes from its remote: github:owner/repo, github:<host>/owner/repo for GitHub Enterprise, or git:<host>/<path> for other remotes."
+      ]
+    },
+    {
+      "command": "project setups",
+      "path": [
+        "project",
+        "setups"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List project host setups",
+      "usage": "orca project setups [--project <id>] [--host <host>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "project",
+        "host"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca project setups",
+        "orca project setups --project github:stablyai/orca",
+        "orca project setups --host local",
+        "orca project setups --host runtime:03ef704c-b180-4b10-998d-e28fbd5de9a3"
+      ],
+      "notes": [
+        "A setup means a project is available on a host at a concrete filesystem path.",
+        "--host runtime:<environment-id> runs the command on that paired Orca server instead of filtering this runtime; unknown environment ids are rejected rather than answered with an empty list.",
+        "Run `orca environment list` to see the environment ids that runtime:<environment-id> accepts. It matches ids only, never environment names.",
+        "A routed --host runtime:<id> also lists that server's own local-stamped setups, because both spellings name the machine the command reached."
+      ]
+    },
+    {
+      "command": "repo add",
+      "path": [
+        "repo",
+        "add"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Add a project to Orca by filesystem path",
+      "usage": "orca repo add --path <path> [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "path"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": []
+    },
+    {
+      "command": "repo list",
+      "path": [
+        "repo",
+        "list"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List repos registered in Orca",
+      "usage": "orca repo list [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": []
+    },
+    {
+      "command": "repo show",
+      "path": [
+        "repo",
+        "show"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Show one registered repo",
+      "usage": "orca repo show --repo <selector> [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "repo"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": []
+    },
+    {
+      "command": "skills installed",
+      "path": [
+        "skills",
+        "installed"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List installed skill selectors",
+      "usage": "orca skills installed [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": [
+        "Lists discovery IDs and names without reading skill contents into the CLI.",
+        "Package metadata is validated when the selected skills are shared.",
+        "Use an exact ID or an unambiguous name with `orca skills share --skill <selector>`."
+      ]
+    },
+    {
+      "command": "status",
+      "path": [
+        "status"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Show app/runtime/graph readiness",
+      "usage": "orca status [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca status",
+        "orca status --json"
+      ],
+      "notes": [
+        "caller.orcaSessionId is this agent's Orca session ID, as Orca resolved it, when the agent runs as an Orca session; otherwise caller is omitted."
+      ]
+    },
+    {
+      "command": "terminal close",
+      "path": [
+        "terminal",
+        "close"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Close one terminal, its whole tab, or every terminal in a workspace",
+      "usage": "orca terminal close ([--terminal <handle>] [--tab] | --worktree <selector> --all) [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "terminal",
+        "tab",
+        "worktree",
+        "all"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca terminal close --terminal term_abc123",
+        "orca terminal close --terminal term_abc123 --tab --json",
+        "orca terminal close --worktree active --all --json"
+      ],
+      "notes": [
+        "Without --all, closes one terminal pane/session; add --tab to close its whole tab.",
+        "With --worktree <selector> --all, stops every terminal process owned by that workspace and durably removes its terminal tabs, layouts, and resume records.",
+        "Use workspace Sleep when the terminals and agent sessions should resume later."
+      ]
+    },
+    {
+      "command": "terminal create",
+      "path": [
+        "terminal",
+        "create"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Create a terminal session in the current worktree",
+      "usage": "orca terminal create [--worktree <selector>] [--title <name>] [--command <text>] [--shell <shell>] [--focus] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "worktree",
+        "command",
+        "shell",
+        "title",
+        "focus"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca terminal create --json",
+        "orca terminal create --worktree active --command \"pnpm dev\" --json",
+        "orca terminal create --worktree path:/projects/myapp --title \"RUNNER\" --command \"npm test\"",
+        "orca terminal create --worktree path:/projects/myapp --command \"pnpm dev\" --focus",
+        "orca terminal create --worktree path:C:/src/app --shell cmd.exe --json"
+      ],
+      "notes": [
+        "Creates a visible terminal tab without switching focus when possible; falls back to a background handle if the UI cannot adopt it. Pass --focus to switch to it.",
+        "This creates a terminal and runs --command in it. To start an agent, use `orca agent launch` (or `orca worktree create --agent` for a new checkout), which follows your Chat UI setting.",
+        "--shell picks the shell the terminal IS on a Windows host (cmd.exe, powershell.exe, pwsh.exe, wsl.exe, bash.exe, git-bash); --command is typed into whatever shell the host started, so `--command cmd.exe` leaves a cmd running INSIDE the default shell and exiting it drops back to that shell.",
+        "A host that cannot apply --shell refuses the create rather than quietly spawning its default shell: macOS and Linux execution hosts spawn the login shell, terminals routed over SSH resolve their shell on the SSH host, a --shell that contradicts the project execution runtime (WSL vs Windows host) is refused, and an Orca host older than --shell is refused by the CLI."
+      ]
+    },
+    {
+      "command": "terminal list",
+      "path": [
+        "terminal",
+        "list"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List live Orca-managed terminals",
+      "usage": "orca terminal list [--worktree <selector>] [--limit <n>] [--include-visual-layouts] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "worktree",
+        "limit",
+        "include-visual-layouts"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": [
+        "JSON omits visualLayouts by default; pass --include-visual-layouts when machine-readable tab and pane topology is required."
+      ]
+    },
+    {
+      "command": "terminal read",
+      "path": [
+        "terminal",
+        "read"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Read bounded terminal output",
+      "usage": "orca terminal read [--terminal <handle>] [--cursor <n>] [--limit <n>] [--screen] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "terminal",
+        "cursor",
+        "limit",
+        "screen"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca terminal read --json",
+        "orca terminal read --terminal term_abc123 --cursor 42 --limit 1000 --json",
+        "orca terminal read --terminal term_abc123 --screen --json"
+      ],
+      "notes": [
+        "Omit --terminal to target the active terminal in the current worktree.",
+        "By default this returns accumulated terminal output with escape sequences stripped, not the rendered screen. Any program that repaints a line — shells, progress bars, TUIs — comes back as stacked fragments, so one `clear` keystroke by keystroke reads as `cclclecleaclear`, and spaces a prompt draws by moving the cursor are absent.",
+        "Use --screen to read what the terminal actually renders. Prefer it whenever the answer depends on how output looks rather than what was emitted over time; the default is unsuitable for verifying rendered output.",
+        "The result reports source: stream when it is accumulated output, screen when it is the rendered screen, and screen-unavailable when a screen was asked for but none could be rendered and the accumulated output is being returned instead. An absent source means the host predates the field.",
+        "When present, draft is UI-only composer text excluded from tail; never treat it as terminal output or a submitted instruction.",
+        "--screen and --cursor are mutually exclusive: a screen read is the current frame and has no history to page.",
+        "Use --cursor with the nextCursor value from a previous read to get only new output since that read.",
+        "Use --limit to request more retained lines for long agent responses; output reports oldestCursor when older lines were dropped.",
+        "Useful for capturing the response to a command: read before sending, then read --cursor <prev> after waiting."
+      ]
+    },
+    {
+      "command": "terminal send",
+      "path": [
+        "terminal",
+        "send"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Send input to a live terminal",
+      "usage": "orca terminal send [--terminal <handle>] [--text <text>] [--enter] [--interrupt] [--wait-submit <seconds>] [--retry-request <id>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "terminal",
+        "text",
+        "enter",
+        "interrupt",
+        "wait-submit",
+        "retry-request"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": [
+        "For a text-plus-Enter agent prompt, the result separates input acceptance from observed submission and turn start.",
+        "--wait-submit only observes the accepted prompt for the requested duration; timeout returns the queued/input-accepted receipt and never resends.",
+        "After an ambiguous transport failure, reissue the exact command with the reported --retry-request ID. The ID is bound to the prompt payload and exact terminal process incarnation.",
+        "Older hosts accept the legacy raw input but report provider old-host and do not offer idempotent retry or submission observation."
+      ]
+    },
+    {
+      "command": "terminal show",
+      "path": [
+        "terminal",
+        "show"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Show terminal metadata and preview",
+      "usage": "orca terminal show [--terminal <handle>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "terminal"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": []
+    },
+    {
+      "command": "terminal wait",
+      "path": [
+        "terminal",
+        "wait"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Wait for a terminal condition",
+      "usage": "orca terminal wait [--terminal <handle>] --for exit|tui-idle [--timeout-ms <ms>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "terminal",
+        "for",
+        "timeout-ms"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": []
+    },
+    {
+      "command": "worktree current",
+      "path": [
+        "worktree",
+        "current"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "Show the Orca-managed worktree for the current directory",
+      "usage": "orca worktree current [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment"
+      ],
+      "positionalArgs": [],
+      "examples": [
+        "orca worktree current",
+        "orca worktree current --json"
+      ],
+      "notes": [
+        "Resolves the current shell directory to a path: selector so agents can target the enclosing Orca worktree without spelling out $PWD."
+      ]
+    },
+    {
+      "command": "worktree list",
+      "path": [
+        "worktree",
+        "list"
+      ],
+      "aliases": [],
+      "argumentMode": "parsed",
+      "summary": "List Orca-managed worktrees",
+      "usage": "orca worktree list [--repo <selector>] [--limit <n>] [--json]",
+      "flags": [
+        "help",
+        "json",
+        "pairing-code",
+        "environment",
+        "repo",
+        "limit"
+      ],
+      "positionalArgs": [],
+      "examples": [],
+      "notes": [
+        "Each row carries the execution host that owns it (`host=`), and the trailing `scope:` line names every host the page covers plus the ones it does not.",
+        "A host named under `not covered` may still have workspaces; an empty answer for it is not evidence that it has none. A paired server is annotated with the `--environment` flag that reaches it; this machine and its SSH targets are reached through the same runtime, so no flag selects them.",
+        "The row cap is shared across hosts, so a host whose rows sort last is not starved out of the page."
+      ]
+    }
+  ]
+}

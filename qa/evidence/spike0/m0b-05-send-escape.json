@@ -1,0 +1,14 @@
+{
+  "id": "72023cac-a726-49ef-a58a-8d727f4bef8e",
+  "ok": true,
+  "result": {
+    "send": {
+      "handle": "term_4c5df7c1-c45a-4af4-b4d7-6ca7d90061c2",
+      "accepted": true,
+      "bytesWritten": 1
+    }
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "id": "local",
+  "ok": true,
+  "result": {
+    "hosts": [
+      {
+        "kind": "local",
+        "name": "<masked>",
+        "id": "local",
+        "selector": "--host local",
+        "machineName": "<masked>",
+        "platform": "darwin"
+      },
+      {
+        "kind": "ssh",
+        "name": "<masked>",
+        "id": "ssh-1784031446277-oobxyg",
+        "selector": "--host ssh:ssh-1784031446277-oobxyg",
+        "connected": false
+      },
+      {
+        "kind": "environment",
+        "name": "<masked>",
+        "id": "1790936a-d7ad-41f4-b1e3-9f715e31637c",
+        "selector": "--environment 멕미니"
+      }
+    ]
+  },
+  "_meta": {
+    "runtimeId": "local"
+  }
+}

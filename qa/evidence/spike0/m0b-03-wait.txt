@@ -1,0 +1,17 @@
+$ orca terminal wait --terminal <test> --for tui-idle --timeout-ms 30000 --json
+{
+  "id": "66aaf335-25b8-4d8c-a168-a379ca197ae9",
+  "ok": true,
+  "result": {
+    "wait": {
+      "handle": "term_4c5df7c1-c45a-4af4-b4d7-6ca7d90061c2",
+      "condition": "tui-idle",
+      "satisfied": true,
+      "status": "running",
+      "exitCode": null
+    }
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}

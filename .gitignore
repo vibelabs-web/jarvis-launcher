@@ -1,0 +1,7 @@
+.build/
+build/
+.local-models/
+.local-data/
+qa/sandbox/
+.DS_Store
+*.wav

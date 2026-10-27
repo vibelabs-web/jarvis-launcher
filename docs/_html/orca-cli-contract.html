@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Orca / Claude Code CLI 계약서 (Spike 0 실증)</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">Orca / Claude Code CLI 계약서 (Spike 0 실증)</div><div class="sub">orca-cli-contract.md</div><a class="lvl1" href="#orca-claude-code-cli-계약서-spike-0-실증">Orca / Claude Code CLI 계약서 (Spike 0 실증)</a><a class="lvl2" href="#1-공통-규칙">1. 공통 규칙</a><a class="lvl2" href="#2-읽기-명령-검증됨">2. 읽기 명령 (검증됨)</a><a class="lvl3" href="#식별-가능성-prd-93-1">식별 가능성 (PRD 9.3-1)</a><a class="lvl2" href="#3-쓰기-명령-실증-결과">3. 쓰기 명령 (실증 결과)</a><a class="lvl3" href="#31-텍스트-전송-검증됨-테스트-전용-터미널-m0b-07">3.1 텍스트 전송 — **검증됨** (테스트 전용 터미널, m0b-07)</a><a class="lvl3" href="#32-터미널-생성-검증됨-m0b-02">3.2 터미널 생성 — **검증됨** (m0b-02)</a><a class="lvl3" href="#33-터미널-닫기-검증됨-m0b-10">3.3 터미널 닫기 — **검증됨** (m0b-10)</a><a class="lvl3" href="#34-폴더-등록-부분-검증">3.4 폴더 등록 — **부분 검증**</a><a class="lvl3" href="#35-사용하지-않는-명령">3.5 사용하지 않는 명령</a><a class="lvl2" href="#4-claude-code-기동-계약-g1-검증됨">4. Claude Code 기동 계약 (G1) — **검증됨**</a><a class="lvl3" href="#41-중요-tui-idle은-입력-가능-상태를-뜻하지-않는다-m0b-03-m0b-04">4.1 중요: `tui-idle`은 입력 가능 상태를 뜻하지 않는다 (m0b-03, m0b-04)</a><a class="lvl2" href="#5-버전-의존-위험">5. 버전 의존 위험</a></nav>
+<main><h1 id="orca-claude-code-cli-계약서-spike-0-실증">Orca / Claude Code CLI 계약서 (Spike 0 실증)</h1>
+<ul><li>실증일: 2026-10-27 · Orca CLI <strong>1.4.242</strong> · Claude Code <strong>2.1.311</strong> · macOS 26.5.2 (M1 Pro)</li><li>근거 원문: <code>qa/evidence/spike0/</code> (개인 경로·제목·기기명 마스킹)</li><li>명령·옵션의 근거는 <code>orca --help</code>(01)와 <code>orca agent-context --json</code>(03)뿐이다. 이 버전에서는 하위 명령 <code>--help</code>가 동작하지 않는다(02, <code>Unknown command</code>).</li><li>JARVIS는 아래에 <strong>검증됨</strong>으로 표시된 명령만 호출한다. 버전이 바뀌면 이 문서를 다시 실증한다.</li></ul>
+<h2 id="1-공통-규칙">1. 공통 규칙</h2>
+<ul><li>실행: <code>Process</code>에 실행 파일 URL과 인자 배열을 넘긴다. 셸 문자열 보간은 하지 않는다. 항상 <code>--json</code>을 붙인다.</li><li>응답 봉투: <code>{ id, ok, result, _meta{runtimeId} }</code>. <code>ok != true</code>이거나 종료 코드가 0이 아니면 실패로 본다.</li><li>Orca 실행 파일 탐색 순서: 설정값 → <code>/Applications/Orca.app/Contents/Resources/bin/orca</code> → PATH.</li></ul>
+<h2 id="2-읽기-명령-검증됨">2. 읽기 명령 (검증됨)</h2>
+<div class="table-wrap"><table><thead><tr><th>용도</th><th>명령</th><th>JARVIS가 쓰는 필드</th><th>증거</th></tr></thead><tbody><tr><td>런타임 상태</td><td><code>orca status --json</code></td><td><code>result.app.running</code>, <code>result.runtime.state</code>(<code>ready</code>), <code>runtime.appVersion</code></td><td>04-status</td></tr><tr><td>호스트</td><td><code>orca host list --json</code></td><td><code>hosts[].kind/id</code>. local id = <code>local</code></td><td>04-hosts</td></tr><tr><td>터미널 목록</td><td><code>orca terminal list --json</code></td><td><code>terminals[].handle, incarnationId, orphaned, worktreeId, worktreePath, connected, writable, executionHostId, agentIdentity, lastOutputAt</code> + <code>hostScope.omittedHostIds</code></td><td>04-tl</td></tr><tr><td>터미널 단건</td><td><code>orca terminal show --terminal &lt;h&gt; --json</code></td><td>위 필드 + <code>agentWait</code></td><td>m0b-09</td></tr><tr><td>화면 읽기</td><td><code>orca terminal read --terminal &lt;h&gt; --screen --json</code></td><td><code>result.terminal.source</code>(<code>screen</code>), <code>tail[]</code></td><td>06, m0b-04/06/08</td></tr><tr><td>대기</td><td><code>orca terminal wait --terminal &lt;h&gt; --for tui-idle|exit --timeout-ms &lt;ms&gt; --json</code></td><td><code>wait.satisfied, status, exitCode, exitCause.kind</code></td><td>m0b-03, close 확인</td></tr><tr><td>스킬</td><td><code>orca skills installed --json</code></td><td><code>skills[].id, name, description, providers[], sourceKind, sourceLabel</code></td><td>04-skills</td></tr><tr><td>저장소</td><td><code>orca repo list --json</code></td><td><code>repos[].id, path, kind(git|folder)</code></td><td>04-repos</td></tr></tbody></table></div>
+<h3 id="식별-가능성-prd-93-1">식별 가능성 (PRD 9.3-1)</h3>
+<ul><li>경로·호스트·에이전트 종류: <strong>식별 가능</strong>. <code>worktreePath</code>, <code>executionHostId</code>, <code>agentIdentity</code>(<code>claude</code> 또는 null)를 쓴다.</li><li><strong>Claude 세션 ID: 제공되지 않는다.</strong> 같은 worktree에 Claude가 두 개 이상이면 자동으로 매칭하지 않고 매번 수동으로 선택하게 한다.</li><li><code>worktreePath</code>는 <strong>worktree 루트</strong>다. 그 하위 폴더에서 <code>cd</code>로 시작한 세션도 루트 경로로 보고된다(m0b-09).</li><li><code>orphaned: true</code>이고 <code>agentIdentity: null</code>인 터미널은 일반 셸이거나 미확인이므로 전송 대상에서 뺀다.</li><li>원격 호스트는 <code>hostScope.omittedHostIds</code>에 나온다. MVP에서는 <code>executionHostId == &quot;local&quot;</code>인 터미널에만 보낸다.</li></ul>
+<h2 id="3-쓰기-명령-실증-결과">3. 쓰기 명령 (실증 결과)</h2>
+<h3 id="31-텍스트-전송-검증됨-테스트-전용-터미널-m0b-07">3.1 텍스트 전송 — <strong>검증됨</strong> (테스트 전용 터미널, m0b-07)</h3>
+<p><code>orca terminal send --terminal &lt;h&gt; --text &lt;text&gt; --enter --wait-submit &lt;s&gt; --json</code></p>
+<pre class="code"><code>result.send.accepted: true
+result.send.prompt.requestId: &lt;uuid&gt;
+result.send.prompt.stages: [&quot;input_accepted&quot;, &quot;turn_started&quot;]
+result.send.prompt.provider: &quot;claude&quot;, observation: &quot;supported&quot;
+result.send.prompt.processIncarnation: &lt;incarnationId와 같음&gt;
+result.mutation.replayed: false</code></pre>
+<p>JARVIS의 결과 매핑:</p>
+<ul><li><code>stages</code>에 <code>turn_started</code>가 있으면 <strong>전송 확인</strong>(<code>터미널에 전달됨</code>)</li><li><code>input_accepted</code>만 있으면 <strong>상태 불명</strong></li><li><code>accepted:false</code>이거나 <code>ok:false</code>이면 <strong>실패</strong></li><li>자동 재전송은 하지 않는다. 사용자가 수동으로 재시도할 때만 <code>--retry-request &lt;requestId&gt;</code>로 같은 요청을 재개한다(같은 payload와 incarnation에 묶여 있음).</li><li><code>processIncarnation</code>이 확인 화면의 <code>incarnationId</code>와 다르면 이상 징후로 기록한다.</li></ul>
+<h3 id="32-터미널-생성-검증됨-m0b-02">3.2 터미널 생성 — <strong>검증됨</strong> (m0b-02)</h3>
+<p><code>orca terminal create --worktree path:&lt;worktree-root&gt; --title &lt;t&gt; --command &lt;text&gt; --json</code> → <code>result.terminal.{handle, incarnationId, worktreeId, executionHostId, processId, surface}</code>. <code>--command</code> 문자열은 <strong>로그인 셸에 그대로 입력된다</strong>. 따라서 경로는 작은따옴표로 이스케이프한다(<code>'</code> → <code>'\''</code>).</p>
+<h3 id="33-터미널-닫기-검증됨-m0b-10">3.3 터미널 닫기 — <strong>검증됨</strong> (m0b-10)</h3>
+<p><code>orca terminal close --terminal &lt;h&gt; --tab --json</code> → <code>ptyKilled:false</code>가 즉시 반환된다. 닫기는 비동기이므로 <code>terminal wait --for exit</code>로 <code>exitCause.kind == operator_close</code>를 확인해야 한다.</p>
+<h3 id="34-폴더-등록-부분-검증">3.4 폴더 등록 — <strong>부분 검증</strong></h3>
+<p><code>orca repo add --path &lt;dir&gt; --json</code></p>
+<ul><li><strong>Git 저장소 하위 폴더</strong>를 넣으면 새로 등록하지 않고 <strong>상위 Git 저장소 레코드를 반환</strong>한다(m0b-01). 이 경우 새 worktree가 생기지 않는다.</li><li>Git이 아닌 빈 폴더가 <code>kind: folder</code>로 등록되는지는 <strong>미검증</strong>이다. 기존 repo 목록에 <code>kind: folder</code>가 1건 있어 지원은 하는 것으로 보인다. M4에서 Git 밖의 테스트 상위 폴더로 실증한다.</li><li>정리: <code>orca project setup-delete --setup &lt;id&gt;</code>로 &quot;repo-backed setup은 repo 호환 레코드를 제거&quot;한다(스키마 노트). 열린 터미널이 있으면 거부되고, <code>--force</code>로 강제할 수 있다.</li></ul>
+<h3 id="35-사용하지-않는-명령">3.5 사용하지 않는 명령</h3>
+<ul><li><code>orca agent launch</code>: Chat UI 설정에 따라 구조화 채팅으로 열릴 수 있다(스키마 노트). PRD는 TUI를 요구하므로 쓰지 않는다.</li><li><code>orca computer *</code>(UI 자동화): PRD 5.5 절대 규칙에 따라 쓰지 않는다.</li></ul>
+<h2 id="4-claude-code-기동-계약-g1-검증됨">4. Claude Code 기동 계약 (G1) — <strong>검증됨</strong></h2>
+<ul><li>플래그(05-claude-help): <code>--permission-mode plan</code>, <code>--session-id &lt;uuid&gt;</code>, <code>-n/--name &lt;name&gt;</code></li><li>JARVIS가 쓰는 기동 명령: <code>cd -- '&lt;dir&gt;' &amp;&amp; claude --permission-mode plan --session-id &lt;uuid&gt; -n &lt;slug&gt;</code></li><li>플랜 모드 확인: <code>terminal read --screen</code>의 <code>tail</code>에 <code>plan mode on</code>이 있는 줄(m0b-06: <code>⏸ plan mode on (shift+tab to cycle)</code>)</li><li>입력 가능 상태: 화면에 <code>❯</code> 프롬프트 줄이 있고, 아래 <strong>차단 패턴</strong>이 없어야 한다.</li></ul>
+<h3 id="41-중요-tui-idle은-입력-가능-상태를-뜻하지-않는다-m0b-03-m0b-04">4.1 중요: <code>tui-idle</code>은 입력 가능 상태를 뜻하지 않는다 (m0b-03, m0b-04)</h3>
+<p>기동 직후 Claude가 <strong>&quot;3 new MCP servers found in this project … Enable selected / Esc to reject all&quot;</strong> 대화상자를 띄운 상태에서도 <code>terminal wait --for tui-idle</code>이 <code>satisfied: true</code>를 반환했다.</p>
+<ul><li>JARVIS는 대화상자(MCP 승인, 폴더 신뢰, 권한 요청, 질문)에 <strong>자동으로 응답하지 않는다.</strong> 대화상자가 보이면 <code>사용자 확인 필요</code> 상태로 멈추고 <code>Orca에서 열기</code> / <code>다시 확인</code>을 안내한다.</li><li>차단 패턴(휴리스틱, 버전 의존): <code>Enable selected</code>, <code>Esc to reject</code>, <code>Do you trust</code>, <code>Yes, proceed</code>, <code>Do you want to</code>, <code>❯ 1.</code>. 판정이 애매하면 차단한다.</li><li>M0b 테스트 터미널에서는 이 대화상자를 Esc(모두 거부)로 닫고 진행했다(m0b-05). 활성화한 MCP는 없다.</li></ul>
+<h2 id="5-버전-의존-위험">5. 버전 의존 위험</h2>
+<ul><li>화면 패턴(<code>plan mode on</code>, 대화상자 문구)은 Claude Code 2.1.311 기준이다. 업데이트되면 회귀 테스트(<code>Tests/…/ScreenClassifierTests</code>) 픽스처를 다시 채취한다.</li><li>하위 명령 <code>--help</code>가 동작하지 않으므로 버전이 바뀌면 <code>agent-context --json</code>을 다시 채취해 비교한다.</li></ul>
+<div class="meta-foot">원본: <code>orca-cli-contract.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

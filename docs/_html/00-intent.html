@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>00-brief — 맥 상주 프롬프트 런처 (가칭: JARVIS Launcher)</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">00-brief — 맥 상주 프롬프트 런처 (가칭: JARVIS Launcher)</div><div class="sub">00-intent.md</div><a class="lvl1" href="#00-brief-맥-상주-프롬프트-런처-가칭-jarvis-launcher">00-brief — 맥 상주 프롬프트 런처 (가칭: JARVIS Launcher)</a><a class="lvl2" href="#무엇을-누구를-위해">무엇을, 누구를 위해</a><a class="lvl2" href="#핵심-기능-3가지">핵심 기능 3가지</a><a class="lvl2" href="#결정-사항">결정 사항</a><a class="lvl2" href="#제외-다음-버전">제외 (다음 버전)</a><a class="lvl2" href="#mvp-완료-기준-초안">MVP 완료 기준 (초안)</a><a class="lvl2" href="#tbd">TBD</a></nav>
+<main><h1 id="00-brief-맥-상주-프롬프트-런처-가칭-jarvis-launcher">00-brief — 맥 상주 프롬프트 런처 (가칭: JARVIS Launcher)</h1>
+<p>상태: 작가님 확인 대기 (2026-10-27)</p>
+<h2 id="무엇을-누구를-위해">무엇을, 누구를 위해</h2>
+<ul><li>사용자: 작가님 1인 (MacBook, Orca 터미널에서 Claude Code 여러 세션 운영)</li><li>문제: 여러 Orca 세션에 요청을 보내거나 새 프로젝트를 시작할 때마다 터미널을 찾아 들어가 길게 타이핑해야 함</li><li>해결: 핫키 한 번으로 화면 가운데 프롬프트 창을 띄우고, 말로 요청하면 알맞은 Claude Code 세션으로 보내거나 새 프로젝트를 플랜 모드로 시작</li></ul>
+<h2 id="핵심-기능-3가지">핵심 기능 3가지</h2>
+<ol><li>호출과 입력<ul><li>전역 핫키로 화면 가운데 반투명 프롬프트 창(Spotlight 느낌), 메뉴바 상주</li><li>마이크 버튼으로 받아쓰기: 로컬 경량 모델 (현재 설치된 Whisper 사용 가능, 한국어 인식률 더 좋은 경량 모델 비교 후 선택 — PRD에서 결정)</li><li>텍스트 직접 입력도 가능</li></ul></li><li>Orca 세션 연결과 라우팅<ul><li>설정: Orca CLI로 열린 터미널 세션 목록을 불러와 프로젝트별로 페어링</li><li>앱 시작 때마다 자동 재연결 (재부팅 등으로 세션 핸들이 바뀌어도 프로젝트 기준으로 다시 짝지음)</li><li>요청 내용을 보고 앱이 보낼 세션을 자동 추천 → 작가님이 확인 후 전송</li></ul></li><li>새 프로젝트 시작<ul><li>말한 내용을 Typeless처럼 구조화된 메타 프롬프트로 정리 (확인·수정 가능)</li><li>설정의 기본 상위 폴더 아래 앱이 프로젝트 이름을 제안 → 작가님 확인 → 폴더 생성</li><li>새 Orca 터미널을 열고 Claude Code를 플랜 모드로 시작해 메타 프롬프트 전달</li><li>시스템에 설치된 Claude Code 스킬 목록을 보여주고 골라서 호출 가능</li></ul></li></ol>
+<h2 id="결정-사항">결정 사항</h2>
+<ul><li>플랫폼: macOS 전용, Swift 네이티브 (윈도우는 범위 밖)</li><li>판단 엔진(세션 추천·메타 프롬프트 정리): 로컬 경량 모델 — 오프라인, 추가 비용 없음</li><li>받아쓰기: 로컬 모델</li><li>호출: 첫 버전은 핫키만</li></ul>
+<h2 id="제외-다음-버전">제외 (다음 버전)</h2>
+<ul><li>음성 호출(웨이크 워드)</li><li>윈도우판</li><li>클라우드 API 사용</li></ul>
+<h2 id="mvp-완료-기준-초안">MVP 완료 기준 (초안)</h2>
+<ul><li>핫키로 창이 뜨고 닫힘, 메뉴바 상주</li><li>한국어 받아쓰기가 창에 입력됨</li><li>앱 시작 시 Orca 세션 목록을 불러와 페어링 유지</li><li>기존 프로젝트 요청: 추천 세션 표시 → 확인 → 해당 Orca 터미널에 전송 성공</li><li>새 프로젝트 요청: 메타 프롬프트 생성 → 폴더 이름 확인 → 새 터미널에서 Claude Code 플랜 모드로 전달 성공</li><li>스킬 목록 조회·선택 가능</li></ul>
+<h2 id="tbd">TBD</h2>
+<ul><li>로컬 판단 모델 후보(예: 소형 LLM)와 한국어 STT 모델 후보 — PRD/리서치에서 비교</li><li>핫키 조합 기본값</li><li>세션 응답(완료·질문)을 창에서 보여줄지 여부</li><li>앱 이름</li></ul>
+<div class="meta-foot">원본: <code>00-intent.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

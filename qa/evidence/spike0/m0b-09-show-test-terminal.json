@@ -1,0 +1,20 @@
+{
+ "handle": "term_4c5df7c1-c45a-4af4-b4d7-6ca7d90061c2",
+ "ptyId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/Documents/dev/vibelabs-core/jarvis-launcher@@bf21bd11",
+ "incarnationId": "be36ff1a-6374-413d-bd82-2d9e8a3464ce",
+ "orphaned": false,
+ "worktreeId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/Documents/dev/vibelabs-core/jarvis-launcher",
+ "worktreePath": "~/Documents/dev/vibelabs-core/jarvis-launcher",
+ "branch": "refs/heads/master",
+ "tabId": "8234082e-fb3e-43eb-b7bc-dfe5956b83e8",
+ "leafId": "87ee2662-056a-427f-8811-bc3130d6b540",
+ "title": "jl-spike",
+ "connected": true,
+ "writable": true,
+ "lastOutputAt": 1793095489803,
+ "executionHostId": "local",
+ "agentIdentity": "claude",
+ "paneRuntimeId": 1,
+ "rendererGraphEpoch": 0,
+ "agentWait": null
+}

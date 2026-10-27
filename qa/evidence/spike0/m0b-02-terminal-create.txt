@@ -1,0 +1,23 @@
+$ orca terminal create --worktree path:<repo> --title jl-spike-test --command "cd -- '<sandbox>' && claude --permission-mode plan --session-id <uuid> -n jl-spike" --json
+{
+  "id": "a863580f-da5b-4b1d-9404-11540bbb70e1",
+  "ok": true,
+  "result": {
+    "terminal": {
+      "processId": 87064,
+      "handle": "term_4c5df7c1-c45a-4af4-b4d7-6ca7d90061c2",
+      "tabId": "8234082e-fb3e-43eb-b7bc-dfe5956b83e8",
+      "paneKey": "8234082e-fb3e-43eb-b7bc-dfe5956b83e8:87ee2662-056a-427f-8811-bc3130d6b540",
+      "ptyId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/Documents/dev/vibelabs-core/jarvis-launcher@@bf21bd11",
+      "worktreeId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/Documents/dev/vibelabs-core/jarvis-launcher",
+      "title": "jl-spike-test",
+      "executionHostId": "local",
+      "incarnationId": "be36ff1a-6374-413d-bd82-2d9e8a3464ce",
+      "hostPlatform": "darwin",
+      "surface": "visible"
+    }
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}

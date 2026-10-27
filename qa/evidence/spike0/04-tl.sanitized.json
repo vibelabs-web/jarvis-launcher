@@ -1,0 +1,161 @@
+{
+  "id": "62471548-c0a9-41db-8323-8d3c8e35bc05",
+  "ok": true,
+  "result": {
+    "terminals": [
+      {
+        "handle": "term_16e29e2f-b1de-4139-a33d-40117629f3e9",
+        "ptyId": "67903f8b-efb1-4617-ba31-4d9159c2d5d7::/Volumes/Data/<path>",
+        "incarnationId": "f691be1c-addb-4dcb-b260-d83d769e5ccb",
+        "orphaned": false,
+        "worktreeId": "67903f8b-efb1-4617-ba31-4d9159c2d5d7::/Volumes/Data/<path>",
+        "worktreePath": "/Volumes/Data/<path>",
+        "branch": "<masked>",
+        "tabId": "6f99ce66-3137-4a8a-9449-68bceef79b70",
+        "leafId": "470237aa-72e9-4aea-a207-51a786163c71",
+        "title": "<masked>",
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": 1793094875110,
+        "preview": "<masked>",
+        "executionHostId": "local",
+        "agentIdentity": "claude"
+      },
+      {
+        "handle": "term_ca628ed7-df06-4b77-b6a6-1d12db86a463",
+        "ptyId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/<path>",
+        "incarnationId": "2b9bbbfe-7acc-483f-96d7-b9f2c24ed41e",
+        "orphaned": false,
+        "worktreeId": "d0f89355-d79f-46db-99e0-9e86b38ca26f::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "49b7708d-647f-4eff-a7b7-e729dbf4995b",
+        "leafId": "58cce17b-104a-411b-98db-4de11b689394",
+        "title": "<masked>",
+        "paneTitle": "<masked>",
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": 1793095026326,
+        "preview": "<masked>",
+        "executionHostId": "local",
+        "agentIdentity": "claude"
+      },
+      {
+        "handle": "term_e015a92e-65eb-4eb7-8c16-c6943e0a230e",
+        "ptyId": "3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "incarnationId": "612a7223-3743-4552-8461-7685ca96be6d",
+        "orphaned": true,
+        "recordedPaneKey": "4496c19a-be1f-4347-9550-4632f8a3f150:0bc089da-3caa-4f70-893a-3aee1db2e36d",
+        "worktreeId": "3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "pty:3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "leafId": "pty:3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "title": null,
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "",
+        "executionHostId": "local"
+      },
+      {
+        "handle": "term_fee5dd05-7a70-4ffb-8e64-cc00b5ee200c",
+        "ptyId": "3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "incarnationId": "ff292274-0d86-4102-a4ab-1f66b277c41a",
+        "orphaned": true,
+        "recordedPaneKey": "3a5f9fb2-30e1-4b7e-977b-6cd5a1f9aea5:5840d747-2080-4e54-8a82-52585592b686",
+        "worktreeId": "3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "pty:3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "leafId": "pty:3d407cb8-fefa-4667-b44d-9556f43808a6::~/<path>",
+        "title": null,
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "",
+        "executionHostId": "local"
+      },
+      {
+        "handle": "term_049c7cf8-c1e4-4e5b-9e7c-30a7d456f62c",
+        "ptyId": "797f7640-7a4b-4f4f-8655-f2d131645b3c::~/<path>",
+        "incarnationId": "e4951ddc-d90f-43d1-8a17-69eba7dbda36",
+        "orphaned": true,
+        "recordedPaneKey": "3a0e507a-2926-4af0-8a01-7f84b2c066f3:f8823d1d-e7e6-4664-93fc-585cab2e625b",
+        "worktreeId": "797f7640-7a4b-4f4f-8655-f2d131645b3c::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "pty:797f7640-7a4b-4f4f-8655-f2d131645b3c::~/<path>",
+        "leafId": "pty:797f7640-7a4b-4f4f-8655-f2d131645b3c::~/<path>",
+        "title": null,
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "",
+        "executionHostId": "local"
+      },
+      {
+        "handle": "term_06450cff-6e15-41ad-ad32-1a4bae0b174a",
+        "ptyId": "24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "incarnationId": "308d524b-b6b8-416e-a449-55424c358e3e",
+        "orphaned": true,
+        "recordedPaneKey": "6914d9e7-d57d-4f8b-ba88-fe4cc8b7c42b:116ec612-c83f-4fd8-ba71-644273273a44",
+        "worktreeId": "24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "pty:24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "leafId": "pty:24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "title": null,
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "",
+        "executionHostId": "local"
+      },
+      {
+        "handle": "term_5a7b277a-8caa-4bb0-bbe6-b4769a2eefcf",
+        "ptyId": "24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "incarnationId": "b6047cf5-60eb-4f4c-bc7d-fd356b04e658",
+        "orphaned": true,
+        "recordedPaneKey": "33ddd14c-c44b-4987-b95e-a465d73c9774:97cd1de0-f53b-4fe5-af24-71de8dbf8876",
+        "worktreeId": "24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "worktreePath": "~/<path>",
+        "branch": "<masked>",
+        "tabId": "pty:24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "leafId": "pty:24aa9a40-aa00-4cbb-96fe-12034f22779b::~/<path>",
+        "title": null,
+        "connected": true,
+        "writable": true,
+        "lastOutputAt": null,
+        "preview": "",
+        "executionHostId": "local"
+      }
+    ],
+    "hostScope": {
+      "hostIds": [
+        "local"
+      ],
+      "omittedHostIds": [
+        "runtime:1790936a-d7ad-41f4-b1e3-9f715e31637c"
+      ],
+      "omittedHostSelectors": [
+        {
+          "hostId": "runtime:1790936a-d7ad-41f4-b1e3-9f715e31637c",
+          "selector": "--environment 멕미니"
+        }
+      ]
+    },
+    "topologyRevisions": {
+      "<worktree-0>": 8,
+      "<worktree-1>": 1,
+      "<worktree-2>": 38,
+      "<worktree-3>": 219,
+      "<worktree-4>": 3
+    },
+    "totalCount": 7,
+    "truncated": false
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}

@@ -1,0 +1,65 @@
+{
+  "id": "7e6220bd-5887-4086-af53-9a47da8b1644",
+  "ok": true,
+  "result": {
+    "skills": [
+      {
+        "id": "37ef13fd8fc69f7d",
+        "name": "<masked>",
+        "description": "<masked>",
+        "providers": [
+          "agent-skills"
+        ],
+        "sourceKind": "home",
+        "sourceLabel": "Antigravity home"
+      },
+      {
+        "id": "3e8a64c64cd084a2",
+        "name": "<masked>",
+        "description": "<masked>",
+        "providers": [
+          "codex",
+          "agent-skills"
+        ],
+        "sourceKind": "plugin",
+        "sourceLabel": "Codex plugin cache"
+      },
+      {
+        "id": "01bb220ff369dd1d",
+        "name": "<masked>",
+        "description": "<masked>",
+        "providers": [
+          "codex",
+          "agent-skills"
+        ],
+        "sourceKind": "plugin",
+        "sourceLabel": "Codex plugin cache"
+      },
+      {
+        "id": "eead9eb5e5327dfe",
+        "name": "<masked>",
+        "description": "<masked>",
+        "providers": [
+          "codex",
+          "agent-skills"
+        ],
+        "sourceKind": "plugin",
+        "sourceLabel": "Codex plugin cache"
+      },
+      {
+        "id": "ae1830c3562c2180",
+        "name": "<masked>",
+        "description": "<masked>",
+        "providers": [
+          "agent-skills"
+        ],
+        "sourceKind": "home",
+        "sourceLabel": "Agent skills home"
+      }
+    ],
+    "_note": "truncated to 5 rows"
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}

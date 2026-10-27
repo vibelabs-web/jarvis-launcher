@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="ko"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>결정 기록 (ADR)</title>
+<style>
+:root{--bg:#0f1115;--panel:#161922;--fg:#e6e9ef;--muted:#9aa3b2;--accent:#6ea8fe;--accent2:#7ee3c7;--border:#262b36;--code:#1b1f29;--th:#1d2230}
+@media(prefers-color-scheme:light){:root{--bg:#f7f8fa;--panel:#fff;--fg:#1b2330;--muted:#5b6573;--accent:#2f6fed;--accent2:#0e9f6e;--border:#e3e7ee;--code:#f0f2f6;--th:#eef1f6}}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Apple SD Gothic Neo","Segoe UI",Roboto,sans-serif;line-height:1.7;font-size:16px}
+.layout{display:grid;grid-template-columns:280px 1fr;min-height:100vh}
+nav.toc{position:sticky;top:0;align-self:start;height:100vh;overflow:auto;background:var(--panel);border-right:1px solid var(--border);padding:24px 18px}
+nav.toc .brand{font-weight:800;font-size:15px;letter-spacing:.02em;color:var(--accent);margin-bottom:4px}
+nav.toc .sub{font-size:12px;color:var(--muted);margin-bottom:18px}
+nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:3px 8px;border-radius:6px;font-size:13.5px;border-left:2px solid transparent}
+nav.toc a:hover{color:var(--fg);background:rgba(110,168,254,.08)}
+nav.toc a.lvl2{padding-left:18px}
+nav.toc a.lvl3{padding-left:30px;font-size:12.5px}
+nav.toc a.doc{font-weight:700;color:var(--fg);margin-top:14px}
+main{padding:48px 56px;max-width:920px;margin:0 auto;width:100%;overflow-x:hidden}
+main h1{font-size:30px;font-weight:800;margin:.2em 0 .6em;line-height:1.25}
+main h2{font-size:22px;font-weight:750;margin:1.8em 0 .5em;padding-bottom:.3em;border-bottom:1px solid var(--border)}
+main h3{font-size:18px;font-weight:700;margin:1.4em 0 .4em}
+main h4{font-size:15.5px;font-weight:700;color:var(--muted);margin:1.2em 0 .3em}
+main p{margin:.7em 0}
+a{color:var(--accent)}
+code{background:var(--code);padding:.12em .4em;border-radius:5px;font-family:"SF Mono",ui-monospace,Menlo,Consolas,monospace;font-size:.88em}
+pre.code{background:var(--code);border:1px solid var(--border);border-radius:10px;padding:16px 18px;overflow:auto;font-size:13px;line-height:1.55}
+pre.code code{background:none;padding:0}
+blockquote{margin:1em 0;padding:.6em 1.1em;border-left:3px solid var(--accent);background:rgba(110,168,254,.07);border-radius:0 8px 8px 0;color:var(--fg)}
+ul,ol{padding-left:1.4em;margin:.6em 0}
+li{margin:.25em 0}
+li.task{list-style:none;margin-left:-1.2em}
+li.task input{margin-right:.5em}
+hr{border:none;border-top:1px solid var(--border);margin:2em 0}
+.table-wrap{overflow-x:auto;margin:1em 0;border:1px solid var(--border);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{padding:9px 13px;border-bottom:1px solid var(--border);text-align:left;vertical-align:top}
+th{background:var(--th);font-weight:700;white-space:nowrap}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(110,168,254,.05)}
+img{max-width:100%;border-radius:8px}
+.doc-section{padding-top:8px}
+.doc-section+.doc-section{margin-top:24px;border-top:2px dashed var(--border);padding-top:32px}
+.meta-foot{margin-top:64px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:12.5px}
+.idx-card{display:block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin:10px 0;text-decoration:none;color:var(--fg);transition:.15s}
+.idx-card:hover{border-color:var(--accent);transform:translateY(-1px)}
+.idx-card .t{font-weight:700;font-size:15px}
+.idx-card .p{color:var(--muted);font-size:13px;margin-top:3px}
+.idx-group{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em;margin:24px 0 6px}
+@media(max-width:860px){.layout{grid-template-columns:1fr}nav.toc{position:static;height:auto;border-right:none;border-bottom:1px solid var(--border)}main{padding:28px 20px}}
+</style>
+</head><body>
+<div class="layout">
+<nav class="toc"><div class="brand">결정 기록 (ADR)</div><div class="sub">README.md</div><a class="lvl1" href="#결정-기록-adr">결정 기록 (ADR)</a></nav>
+<main><h1 id="결정-기록-adr">결정 기록 (ADR)</h1>
+<p>2026-10-27 작가님 확인. 상세 근거는 <code>docs/02-plan.md</code> §1–2, <code>docs/orca-cli-contract.md</code>.</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>결정</th><th>이유</th><th>대안·후속</th></tr></thead><tbody><tr><td>ADR-1 STT</td><td>설치되어 있는 whisper.cpp(<code>whisper-cli</code> 1.8.4, Metal)와 <code>~/.cache/whisper-cpp/ggml-small.bin</code>(다국어 small)을 재사용</td><td>추가 다운로드가 없고, 설치를 실측해 확인함</td><td>large-v3-turbo는 벤치마크에서 비교. WhisperKit은 <code>SpeechRecognizer</code> 프로토콜 뒤에 붙일 후속 옵션</td></tr><tr><td>ADR-2 LLM</td><td>llama.cpp 공식 macOS arm64 릴리스(<code>llama-server</code>)와 Qwen3-1.7B Q4<em>K</em>M을 <code>.local-models/</code>에 둔다(gitignore). 127.0.0.1에 무작위 포트·API 키로 띄우는 앱 관리형 서브프로세스</td><td>프로젝트 폴더 밖 수정 금지 제약. 외부 API 사용 금지</td><td>다운로드 직전에 URL·용량·SHA256을 보고. EXAONE은 NC 라이선스라 비교 실험에만 사용</td></tr><tr><td>ADR-3 빌드</td><td>SwiftPM과 <code>scripts/build-app.sh</code>로 .app을 조립하고 ad-hoc 서명. 공증하지 않음</td><td>Xcode 없음(CLT만 있음). 로컬 실행이 목적</td><td>재빌드하면 마이크 권한을 다시 물을 수 있음(알려진 한계)</td></tr><tr><td>ADR-4 기동</td><td><code>orca terminal create --command &quot;cd -- '&lt;dir&gt;' &amp;&amp; claude --permission-mode plan --session-id &lt;uuid&gt; -n &lt;slug&gt;&quot;</code></td><td><code>agent launch</code>는 채팅 UI로 열릴 수 있음. 세션 UUID를 JARVIS가 알게 됨</td><td>화면 footer <code>plan mode on</code>으로 확인한 뒤에만 전송</td></tr><tr><td>ADR-5 데이터</td><td>JSON 파일에 저장. 기본 위치는 <code>~/Library/Application Support/&lt;bundle-id&gt;/</code>, 개발 중에는 <code>JARVIS_DATA_DIR=.local-data</code></td><td>개발 중 폴더 밖 쓰기를 피함. UserDefaults를 쓰지 않음</td><td>로그인 시 실행은 작가님 승인 후에만 켬</td></tr><tr><td>ADR-6 준비 판정</td><td><code>tui-idle</code>만으로는 전송하지 않는다. 화면을 읽어 대화상자 패턴이 있으면 차단</td><td>M0b에서 MCP 승인 대화상자가 떠 있는데도 <code>tui-idle</code>이 충족되는 것을 관찰</td><td>대화상자에 자동 응답하지 않음</td></tr></tbody></table></div>
+<div class="meta-foot">원본: <code>README.md</code> · 자동 생성 2026-10-27 · md-to-html</div>
+</main>
+</div>
+
+</body></html>

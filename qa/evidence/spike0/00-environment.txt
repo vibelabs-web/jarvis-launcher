@@ -1,0 +1,41 @@
+$ orca --version
+1.4.242
+
+$ claude --version
+2.1.311 (Claude Code)
+
+$ swift --version
+swift-driver version: 1.148.6 Apple Swift version 6.3.3 (swiftlang-6.3.3.1.3 clang-2100.1.1.101)
+Target: arm64-apple-macosx26.0
+
+$ xcodebuild -version
+xcode-select: error: tool 'xcodebuild' requires Xcode, but active developer directory '/Library/Developer/CommandLineTools' is a command line tools instance
+
+$ sw_vers
+ProductName:		macOS
+ProductVersion:		26.5.2
+BuildVersion:		25F84
+
+$ sysctl machdep.cpu.brand_string hw.memsize
+Apple M1 Pro
+34359738368
+
+$ ls CommandLineTools Frameworks
+_Testing_AppKit.framework
+_Testing_CoreGraphics.framework
+_Testing_CoreImage.framework
+_Testing_Foundation.framework
+_Testing_UIKit.framework
+Testing.framework
+
+$ which whisper-cli llama-server cmake
+/opt/homebrew/bin/whisper-cli
+llama-server not found
+cmake not found
+
+$ brew list --versions whisper-cpp llama.cpp
+whisper.cpp 1.8.4
+
+$ ls -la whisper models
+-rw-r--r--@ 1 <user>  staff   487601967 Oct 15 12:11 ~/.cache/whisper-cpp/ggml-small.bin
+-rw-r--r--@ 1 <user>  staff  1624555275 Oct 14 02:25 ~/whisper-models/ggml-large-v3-turbo.bin

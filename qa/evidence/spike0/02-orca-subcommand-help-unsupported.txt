@@ -1,0 +1,5 @@
+$ orca terminal list --help
+orca terminal list
+
+Usage: orca terminal list [--worktree <selector>] [--limit <n>] [--include-visual-layouts] [--json]
+...(top-level help repeated; subcommand --help is not supported in 1.4.242)

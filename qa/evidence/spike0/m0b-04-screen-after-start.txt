@@ -1,0 +1,14 @@
+source screen
+<user>@<host> jarvis-launcher % cd -- '~/Documents/dev/vibelabs-
+core/jarvis-launcher/qa/sandbox/jl-spike-20261027190356' && claude --permission-mode plan --session-id
+ de4c49e7-d71d-49d4-86c7-fe4734409091 -n jl-spike
+──────────────────────────────────────────────────────────────────────────────────────────────────────
+  3 new MCP servers found in this project
+  Select any you wish to enable.
+  MCP servers may execute code or access system resources. All tool calls require approval. Learn
+  more in the MCP documentation.
+  ❯ [✔] gemini
+    [✔] context7
+    [✔] playwright
+       Enable selected
+ Space to select · Esc to reject all

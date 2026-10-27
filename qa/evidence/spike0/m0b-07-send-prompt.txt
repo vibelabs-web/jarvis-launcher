@@ -1,0 +1,33 @@
+$ orca terminal send --terminal <test> --text "JARVIS 연결 테스트입니다. 아무 작업도 하지 말고 수신 이라고만 답해 주세요." --enter --wait-submit 10 --json
+{
+  "id": "d51304cb-0ce2-4386-a7df-f564f77158a7",
+  "ok": true,
+  "result": {
+    "send": {
+      "handle": "term_4c5df7c1-c45a-4af4-b4d7-6ca7d90061c2",
+      "accepted": true,
+      "bytesWritten": 115,
+      "prompt": {
+        "requestId": "1629b18a-bf18-4515-9c51-fb911be7cf3e",
+        "stages": [
+          "input_accepted",
+          "turn_started"
+        ],
+        "provider": "claude",
+        "observation": "supported",
+        "processIncarnation": "be36ff1a-6374-413d-bd82-2d9e8a3464ce",
+        "generation": 2,
+        "baselineWorkingSequence": 0,
+        "baselineExplicitWorkingStartedAt": null,
+        "baselinePermissionSequence": 0
+      }
+    },
+    "mutation": {
+      "requestId": "1629b18a-bf18-4515-9c51-fb911be7cf3e",
+      "replayed": false
+    }
+  },
+  "_meta": {
+    "runtimeId": "952fbbec-2dc9-4f25-ae7b-cb6c460b2e2b"
+  }
+}
